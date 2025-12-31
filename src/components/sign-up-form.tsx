@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/lib/supabase/utils'
+import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,7 +44,7 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: `${window.location.origin}/protected/homepage`,
         },
       })
       if (error) throw error

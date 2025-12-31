@@ -1,6 +1,6 @@
 'use client'
 
-import { cn } from '@/lib/supabase/utils'
+import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
@@ -38,7 +38,7 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
       })
       if (error) throw error
       // Update this route to redirect to an authenticated route. The user already has an active session.
-      router.push('/protected')
+      router.push('/protected/homepage')
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

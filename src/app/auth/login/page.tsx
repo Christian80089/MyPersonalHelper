@@ -1,11 +1,23 @@
 import { LoginForm } from '@/components/login-form'
+import { Metadata, Viewport } from 'next'
 
-export default function Page() {
+export const metadata: Metadata = {
+  title: 'Accedi | DataMark - Dashboard Analisi',
+  description: 'Accedi alla tua dashboard per visualizzare dati, analytics e gestire i tuoi progetti in modo sicuro.',
+  robots: 'noindex,nofollow',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
+export default function LoginPage() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">    
-        <LoginForm />
-      </div>
-    </div>
+    <main className="w-screen h-screen overflow-hidden bg-transparent">
+      <LoginForm />
+    </main>
   )
 }

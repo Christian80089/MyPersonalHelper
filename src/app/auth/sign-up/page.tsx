@@ -1,11 +1,24 @@
 import { SignUpForm } from '@/components/sign-up-form'
+import { Metadata, Viewport } from 'next'
 
-export default function Page() {
+export const metadata: Metadata = {
+  title: 'Registrati | My Personal Helper - Dashboard Analisi',
+  description: 'Crea il tuo account gratuito per accedere alla dashboard e gestire i tuoi progetti in modo sicuro.',
+  keywords: 'signup, registrazione, dashboard, analytics, data',
+  robots: 'noindex,nofollow',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
+export default function SignUpPage() {
   return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <SignUpForm />
-      </div>
-    </div>
+    <main className="w-screen h-screen overflow-hidden bg-transparent">
+      <SignUpForm />
+    </main>
   )
 }

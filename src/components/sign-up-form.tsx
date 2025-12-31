@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -22,6 +23,8 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const [repeatPassword, setRepeatPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showRepeatPassword, setShowRepeatPassword] = useState(false)
   const router = useRouter()
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -74,30 +77,67 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
+              
+              {/* PASSWORD CON TOGGLE */}
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
+              
+              {/* REPEAT PASSWORD CON TOGGLE */}
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="repeat-password">Repeat Password</Label>
                 </div>
-                <Input
-                  id="repeat-password"
-                  type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="repeat-password"
+                    type={showRepeatPassword ? "text" : "password"}
+                    required
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowRepeatPassword(!showRepeatPassword)}
+                  >
+                    {showRepeatPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
+              
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Creating an account...' : 'Sign up'}

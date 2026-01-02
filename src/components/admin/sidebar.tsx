@@ -12,33 +12,18 @@ import {
 } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
 import { 
-  Home, 
-  Users, 
-  User, 
-  BarChart3, 
-  Package, 
   Settings, 
   Shield, 
-  Database, 
-  FileText, 
-  LogOut 
+  LogOut, 
+  Table2Icon,
+  BarChart3Icon
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
-  { title: "Dashboard", url: "/protected/admin", icon: Home },
-  { title: "Utenti", url: "/protected/admin/users", icon: Users },
-  { title: "Profili", url: "/protected/admin/profiles", icon: User },
-  { 
-    title: "Analytics", 
-    url: "/protected/admin/analytics", 
-    icon: BarChart3,
-    children: [
-      { title: "Report", url: "/protected/admin/analytics/reports" }
-    ]
-  },
-  { title: "Ordini", url: "/protected/admin/orders", icon: Package },
+  { title: "Dashboard", url: "/protected/admin", icon: BarChart3Icon },
+  { title: "Tables", url: "/protected/admin/tables", icon: Table2Icon },
   { title: "Settings", url: "/protected/admin/settings", icon: Settings },
 ]
 
@@ -64,8 +49,7 @@ export function AppSidebar() {
       <SidebarContent className="p-2">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.url || 
-                          (item.children && item.children.some(child => pathname === child.url))
+          const isActive = pathname === item.url
           
           return (
             <SidebarGroup key={item.title}>

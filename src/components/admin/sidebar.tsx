@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useState } from 'react'
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/protected/admin", icon: BarChart3Icon },
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const [openSubmenu, setOpenSubmenu] = useState<string>('')
 
   return (
     <Sidebar className="border-r bg-background/95 backdrop-blur">

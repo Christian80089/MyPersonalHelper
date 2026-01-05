@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Table,
   TableBody,
@@ -5,7 +7,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-
+import { useState } from "react";
 import { UUID } from "crypto";
 
 interface Salary {
@@ -34,6 +36,9 @@ interface ColumnConfig {
 
 interface SalaryTableProps {
   tableData: Salary[];
+  selectedRows?: UUID[];
+  onRowSelect?: (selectedIds: UUID[]) => void;
+  allowMultiSelect?: boolean;
 }
 
 const SALARY_TABLE_CONFIG: ColumnConfig[] = [
@@ -79,7 +84,32 @@ function formatCellValue(salary: Salary, key: keyof Salary, format?: string) {
   // Stringhe e altro
   return String(value);
 }
-export default function SalaryTable({ tableData }: SalaryTableProps) {
+export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true }: SalaryTableProps) {
+  const [internalSelectedRows, setInternalSelectedRows] = useState<UUID[]>([]); 
+  const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
+
+  const handleRowClick = (rowId: UUID) => {
+    let newSelected: UUID[];
+    
+    if (!allowMultiSelect) {
+      // Selezione singola: toggle on/off
+      newSelected = finalSelectedRows.includes(rowId) 
+        ? [] // deseleziona
+        : [rowId]; // seleziona solo questa
+    } else {
+      // Selezione multipla: toggle
+      newSelected = finalSelectedRows.includes(rowId)
+        ? finalSelectedRows.filter(id => id !== rowId) // rimuovi
+        : [...finalSelectedRows, rowId]; // aggiungi
+    }
+    
+    // Aggiorna stato interno O chiama callback
+    if (selectedRows.length === 0) {
+      setInternalSelectedRows(newSelected);
+    }
+    onRowSelect?.(newSelected);
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -102,15 +132,32 @@ export default function SalaryTable({ tableData }: SalaryTableProps) {
 
             {/* Table Body */}
             <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.02]">
-              {tableData.map((salary) => (
-                <TableRow key={salary.id}>
-                  {SALARY_TABLE_CONFIG.map((column) => (
-                    <TableCell key={column.key} className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400">
-                      {formatCellValue(salary, column.key, column.format)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
+              {tableData.map((salary) => {
+                const isSelected = finalSelectedRows.includes(salary.id);
+                
+                return (
+                  <TableRow 
+                    key={salary.id}
+                    // ← AGGIUNTA CLASSE SELEZIONATA
+                    className={`cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04] ${
+                      isSelected 
+                        ? 'bg-blue-50 border-l-4 border-l-blue-500 dark:bg-blue-500/[0.08]' 
+                        : ''
+                    }`}
+                    // ← AGGIUNTO EVENTO CLICK
+                    onClick={() => handleRowClick(salary.id)}
+                  >
+                    {SALARY_TABLE_CONFIG.map((column) => (
+                      <TableCell 
+                        key={column.key} 
+                        className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                      >
+                        {formatCellValue(salary, column.key, column.format)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

@@ -25,9 +25,9 @@ export default async function BasicTables() {
 
   return (
     <div>
-      <PageBreadcrumb pageTitle="Basic Table" />
+      <PageBreadcrumb pageTitle="Manage Table" />
       <div className="space-y-6">
-        <ComponentCard title="Basic Table 1">
+        <ComponentCard title="Salary Table">
           <SalaryTable tableData={tableData || []} />
         </ComponentCard>
       </div>

@@ -92,7 +92,7 @@ export default function SalaryTable({ tableData }: SalaryTableProps) {
                   <TableCell
                     key={column.key}
                     isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
+                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
                   >
                     {column.label}
                   </TableCell>
@@ -101,7 +101,7 @@ export default function SalaryTable({ tableData }: SalaryTableProps) {
             </TableHeader>
 
             {/* Table Body */}
-            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.05]">
+            <TableBody className="divide-y divide-gray-100 dark:divide-white/[0.02]">
               {tableData.map((salary) => (
                 <TableRow key={salary.id}>
                   {SALARY_TABLE_CONFIG.map((column) => (

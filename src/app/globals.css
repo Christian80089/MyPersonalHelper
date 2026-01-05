@@ -262,23 +262,55 @@
 }
 
 @utility custom-scrollbar {
-  &::-webkit-scrollbar {
+  /* Verticale + Orizzontale - Chrome, Safari, Edge */
+  &::-webkit-scrollbar,
+  &::-webkit-scrollbar-corner {
     @apply size-1.5;
   }
 
+  /* Track Verticale */
   &::-webkit-scrollbar-track {
-    @apply rounded-full;
+    @apply rounded-full bg-transparent;
   }
 
+  /* Thumb Verticale */
   &::-webkit-scrollbar-thumb {
-    @apply bg-gray-200 rounded-full dark:bg-gray-700;
+    @apply bg-gray-200/70 rounded-full 
+           hover:bg-brand-400/60 active:bg-brand-500/80 
+           transition-all duration-200 ease-out;
+    border: 1px solid transparent;
   }
+
+  /* Track Orizzontale */
+  &::-webkit-scrollbar-track:horizontal {
+    @apply rounded-full bg-transparent;
+  }
+
+  /* Thumb Orizzontale - ALTEZZA ESATTA per scrollbar orizzontale */
+  &::-webkit-scrollbar-thumb:horizontal {
+    @apply bg-gray-200/70 rounded-full 
+           hover:bg-brand-400/60 active:bg-brand-500/80 
+           transition-all duration-200 ease-out;
+    border: 1px solid transparent;
+  }
+
+  /* Firefox - Entrambe le direzioni */
+  scrollbar-width: thin;
+  scrollbar-color: theme(colors.gray.200/0.7) transparent;
 }
 
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: #344054;
 }
-
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:horizontal {
+  background-color: #344054;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #344054;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb:horizontal:hover {
+  background-color: #344054;
+}
 
 
 @layer utilities {

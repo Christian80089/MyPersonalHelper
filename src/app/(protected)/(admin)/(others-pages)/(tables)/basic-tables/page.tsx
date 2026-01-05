@@ -17,7 +17,7 @@ export default async function BasicTables() {
     .from("Salary")
     .select("*")
     .order('data_busta_paga', { ascending: false })
-    .limit(50);
+    .limit(10);
 
   if (error) {
     console.error('💥 Error Salary:', error);

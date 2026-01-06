@@ -61,7 +61,7 @@ const Pagination: React.FC<PaginationProps> = ({
       <div className="flex items-center gap-1">
         {visiblePages[0] > 1 && <span className="px-2 text-sm text-gray-500">...</span>}
         
-        {visiblePages.map((page, index) => (
+        {visiblePages.map((page) => (
           <button
             key={page}
             onClick={() => goToPage(page)}

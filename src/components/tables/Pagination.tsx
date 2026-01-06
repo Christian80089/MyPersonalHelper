@@ -1,94 +1,135 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
-
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 type PaginationProps = {
   currentPage: number;
   totalPages: number;
 };
 
-const Pagination: React.FC<PaginationProps> = ({
-  currentPage,
-  totalPages,
-}) => {
+const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const goToPage = (page: number) => {
-    console.log('🖱️ CLICK PAGINA:', page);
     const params = new URLSearchParams(searchParams.toString());
-    console.log('📝 NUOVI PARAMS:', params.toString());
     params.set('page', page.toString());
     router.push(`?${params.toString()}`, { scroll: false });
-    router.refresh(); // ✅ Server re-fetch
+    router.refresh();
   };
 
-  // ← LOGICA CORRETTA: sempre 1-2-3...N o pagine centrali
-  const getVisiblePages = () => {
-    const delta = 2;
-    const range = [];
-    
-    // Sempre prima pagina
-    range.push(1);
-    
-    // Pagine centrali
-    for (let i = Math.max(2, currentPage - delta); 
-         i <= Math.min(totalPages - 1, currentPage + delta); 
-         i++) {
-      range.push(i);
+  const getCompactPageItems = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1) as (
+        | number
+        | 'left-ellipsis'
+        | 'right-ellipsis'
+      )[];
     }
-    
-    // Sempre ultima pagina
-    if (totalPages > 1) range.push(totalPages);
-    
-    // Rimuovi duplicati e ordina
-    return [...new Set(range)].sort((a, b) => a - b);
+
+    const items: (number | 'left-ellipsis' | 'right-ellipsis')[] = [];
+
+    // Prima pagina
+    items.push(1);
+
+    // Ellipsis sinistra
+    if (currentPage > 3) {
+      items.push('left-ellipsis');
+    }
+
+    // Pagine centrali
+    const centerStart = Math.max(2, currentPage - 1);
+    const centerEnd = Math.min(totalPages - 1, currentPage + 1);
+
+    for (let page = centerStart; page <= centerEnd; page++) {
+      if (!items.includes(page)) items.push(page);
+    }
+
+    // Ellipsis destra
+    if (currentPage < totalPages - 2) {
+      items.push('right-ellipsis');
+    }
+
+    // Ultima pagina
+    if (!items.includes(totalPages)) items.push(totalPages);
+
+    return items;
   };
 
-  const visiblePages = getVisiblePages();
+  const pageItems = getCompactPageItems();
 
   return (
-    <div className="flex items-center gap-1">
-      {/* Previous */}
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 shadow-theme-xs dark:bg-gray-950">
+      {/* Left: Previous */}
       <button
         onClick={() => goToPage(currentPage - 1)}
         disabled={currentPage === 1}
-        className="mr-2 flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-theme-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white dark:disabled:text-gray-500"
       >
-        Previous
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs text-gray-500 dark:text-gray-400">
+          <ChevronLeft />
+        </span>
+        <span className="hidden xsm:inline">Previous</span>
       </button>
 
-      {/* Pagine */}
-      <div className="flex items-center gap-1">
-        {visiblePages[0] > 1 && <span className="px-2 text-sm text-gray-500">...</span>}
-        
-        {visiblePages.map((page) => (
-          <button
-            key={page}
-            onClick={() => goToPage(page)}
-            disabled={page === currentPage} // ← Disabilita pagina corrente
-            className={`h-10 w-10 rounded-lg text-sm font-medium flex items-center justify-center transition-all duration-200 ${
-              page === currentPage
-                ? "bg-brand-500 text-white shadow-md cursor-default ring-2 ring-brand-400/50"
-                : "text-gray-700 hover:bg-gray-100 hover:text-brand-500 dark:text-gray-400 dark:hover:bg-white/[0.08] dark:hover:text-brand-400"
-            } focus:outline-none focus:ring-2 focus:ring-brand-500`}
-          >
-            {page}
-          </button>
-        ))}
-        
-        {visiblePages[visiblePages.length - 1] < totalPages && (
-          <span className="px-2 text-sm text-gray-500">...</span>
-        )}
+      {/* Center: pages (compatta) */}
+      <div className="flex items-center gap-1.5">
+        {pageItems.map((item, index) => {
+          if (item === 'left-ellipsis' || item === 'right-ellipsis') {
+            return (
+              <span
+                key={`${item}-${index}`}
+                className="px-1 text-theme-xs font-medium uppercase tracking-wide text-gray-400"
+              >
+                ...
+              </span>
+            );
+          }
+
+          const page = item as number;
+          const isActive = page === currentPage;
+
+          return (
+            <button
+              key={page}
+              onClick={() => goToPage(page)}
+              disabled={isActive}
+              className={[
+                'flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-theme-sm font-medium transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-950',
+                isActive
+                  ? 'bg-brand-500 text-white shadow-theme-xs cursor-default'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-brand-500 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-brand-400',
+              ].join(' ')}
+            >
+              {page}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Next */}
-      <button
-        onClick={() => goToPage(currentPage + 1)}
-        disabled={currentPage === totalPages}
-        className="ml-2 flex h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] transition-colors"
-      >
-        Next
-      </button>
+      {/* Right: Next + info */}
+      <div className="flex items-center gap-3">
+        <p className="hidden text-theme-xs text-gray-500 sm:inline">
+          Page{' '}
+          <span className="font-medium text-gray-900 dark:text-white">
+            {currentPage}
+          </span>{' '}
+          of{' '}
+          <span className="font-medium text-gray-900 dark:text-white">
+            {totalPages}
+          </span>
+        </p>
+
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-theme-sm font-medium text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:bg-transparent dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-white dark:disabled:text-gray-500"
+        >
+          <span className="hidden xsm:inline">Next</span>
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md text-xs text-gray-500 dark:text-gray-400">
+            <ChevronRight />
+          </span>
+        </button>
+      </div>
     </div>
   );
 };

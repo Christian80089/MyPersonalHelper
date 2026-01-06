@@ -9,6 +9,8 @@ import {
 } from "../ui/table";
 import { useState } from "react";
 import { UUID } from "crypto";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 interface Salary {
   id: UUID;
@@ -32,13 +34,18 @@ interface ColumnConfig {
   key: keyof Salary;
   label: string;
   format?: 'date' | 'currency';
+  sortable?: boolean;
 }
+
+type SortDir = 'asc' | 'desc';
 
 interface SalaryTableProps {
   tableData: Salary[];
   selectedRows?: UUID[];
   onRowSelect?: (selectedIds: UUID[]) => void;
   allowMultiSelect?: boolean;
+  serverSortKey: string;
+  serverSortDirection: SortDir;
 }
 
 const SALARY_TABLE_CONFIG: ColumnConfig[] = [
@@ -84,9 +91,12 @@ function formatCellValue(salary: Salary, key: keyof Salary, format?: string) {
   // Stringhe e altro
   return String(value);
 }
-export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true }: SalaryTableProps) {
+export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true, serverSortKey, serverSortDirection}: SalaryTableProps) {
   const [internalSelectedRows, setInternalSelectedRows] = useState<UUID[]>([]); 
   const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const handleRowClick = (rowId: UUID) => {
     let newSelected: UUID[];
@@ -110,6 +120,23 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
     onRowSelect?.(newSelected);
   };
 
+  const handleServerSortClick = (dbKey: string) => {
+    const isSameColumn = serverSortKey === dbKey;
+    const nextDir: SortDir =
+      !isSameColumn
+        ? 'asc'
+        : serverSortDirection === 'asc'
+        ? 'desc'
+        : 'asc';
+
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('sortBy', dbKey);
+    params.set('sortDir', nextDir);
+    params.set('page', '1');
+
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
       <div className="max-w-full overflow-x-auto">
@@ -117,16 +144,54 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
             {/* Table Header */}
             <TableHeader className="border-b border-gray-100 dark:border-white/[0.05]">
               <TableRow>
-                {/* Header generato automaticamente */}
-                {SALARY_TABLE_CONFIG.map((column) => (
-                  <TableCell
-                    key={column.key}
-                    isHeader
-                    className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400 whitespace-nowrap"
-                  >
-                    {column.label}
-                  </TableCell>
-                ))}
+                {SALARY_TABLE_CONFIG.map((column) => {
+                  const isSortable = column.sortable ?? true;
+                  const isSorted = serverSortKey === column.key;
+                  const direction = serverSortDirection;
+
+                  return (
+                    <TableCell
+                      key={column.key}
+                      isHeader
+                      className={
+                        "px-5 py-3 font-medium text-gray-500 text-start text-theme-s dark:text-gray-400 whitespace-nowrap" +
+                        (isSortable ? " cursor-pointer select-none" : "")
+                      }
+                      onClick={
+                        isSortable ? () => handleServerSortClick(column.key) : undefined
+                      }
+                      role={isSortable ? "button" : undefined}
+                      tabIndex={isSortable ? 0 : undefined}
+                      onKeyDown={
+                        isSortable
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleServerSortClick(column.key);
+                              }
+                            }
+                          : undefined
+                      }
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>{column.label}</span>
+                        {isSortable && (
+                          <>
+                            {!isSorted && (
+                              <ArrowUpDown className="h-3 w-3 text-gray-400 dark:text-gray-500" />
+                            )}
+                            {isSorted && direction === 'asc' && (
+                              <ArrowUp className="h-3 w-3 text-gray-500 dark:text-gray-300" />
+                            )}
+                            {isSorted && direction === 'desc' && (
+                              <ArrowDown className="h-3 w-3 text-gray-500 dark:text-gray-300" />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  );
+                })}
               </TableRow>
             </TableHeader>
 

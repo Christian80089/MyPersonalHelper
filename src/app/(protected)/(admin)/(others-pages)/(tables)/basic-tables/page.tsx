@@ -11,19 +11,21 @@ export const metadata: Metadata = {
   // other metadata
 };
 
+type SortDir = 'asc' | 'desc';
+
 interface SalaryPageProps {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; sortBy?: string; sortDir?: SortDir }>;
 }
 
-async function fetchData(page: number = 1, limit: number = 10) {
+async function fetchData(page: number = 1, limit: number = 8, sortBy: string = 'data_busta_paga', sortDir: SortDir = 'desc') {
   const supabase = await createClient();
   
   const from = (page - 1) * limit;
   
   const { data, error, count } = await supabase
     .from("Salary")
-    .select("*", { count: 'exact' })
-    .order('data_busta_paga', { ascending: false })
+    .select("*", { count: 'estimated' })
+    .order(sortBy, { ascending: sortDir === 'asc' })
     .range(from, from + limit - 1);
 
   if (error) throw error;
@@ -41,13 +43,18 @@ export default async function DataTables({ searchParams }: SalaryPageProps) {
 
   const resolvedSearchParams = await searchParams;
   const page = Math.max(1, parseInt(resolvedSearchParams.page || '1'));
+  const sortByParam = resolvedSearchParams.sortBy;
+  const sortDirParam = (resolvedSearchParams.sortDir as SortDir | undefined) || 'desc';
+
+  const sortBy = sortByParam || 'data_busta_paga'; // default colonna TODO change with first column date
+  const sortDir: SortDir = sortDirParam;
 
   console.log('🔥 SERVER:', { 
     searchParams: resolvedSearchParams, 
     page 
   });
 
-  const { data: tableData, totalPages, currentPage } = await fetchData(page);
+  const { data: tableData, totalPages, currentPage } = await fetchData(page, 8, sortBy, sortDir,);
 
   console.log('📊 DATI:', { 
     page, 
@@ -59,7 +66,7 @@ export default async function DataTables({ searchParams }: SalaryPageProps) {
     <div>
       <div className="space-y-6">
         <ComponentCard title="Salary Table">
-          <SalaryTable tableData={tableData || []} />
+          <SalaryTable tableData={tableData || []} serverSortKey={sortBy} serverSortDirection={sortDir} />
         </ComponentCard>
         {totalPages > 1 && (
         <div className="flex justify-center pt-8 border-t border-gray-200">

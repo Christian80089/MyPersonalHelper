@@ -31,7 +31,7 @@ export default function AdminLayout({
         <AppHeader />
         
         {/* Content - NO CONTAINER, padding diretto */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar pt-4 px-4 md:px-6 lg:px-8 w-full max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto custom-scrollbar pt-4 px-4 md:px-6 lg:px-8 w-full max-w-9xl mx-auto">
           {children}
         </main>
       </div>

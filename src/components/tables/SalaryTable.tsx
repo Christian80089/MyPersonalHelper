@@ -10,7 +10,9 @@ import {
 import { useState } from "react";
 import { UUID } from "crypto";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import Button from "../ui/button/Button"
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
 
 interface Salary {
   id: UUID;
@@ -46,6 +48,7 @@ interface SalaryTableProps {
   allowMultiSelect?: boolean;
   serverSortKey: string;
   serverSortDirection: SortDir;
+  onDeleteMultiple?: (ids: UUID[]) => void;
 }
 
 const SALARY_TABLE_CONFIG: ColumnConfig[] = [
@@ -91,13 +94,24 @@ function formatCellValue(salary: Salary, key: keyof Salary, format?: string) {
   // Stringhe e altro
   return String(value);
 }
-export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true, serverSortKey, serverSortDirection}: SalaryTableProps) {
+export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true, serverSortKey, serverSortDirection, onDeleteMultiple}: SalaryTableProps) {
   const [internalSelectedRows, setInternalSelectedRows] = useState<UUID[]>([]); 
   const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
 
+  const handleDeleteMultiple = () => {
+    if (finalSelectedRows.length === 0) return
+    setOpenDeleteDialog(true)
+  }
+
+  const confirmDeleteMultiple = () => {
+    onDeleteMultiple?.(finalSelectedRows)
+    setOpenDeleteDialog(false)
+  }
+  
   const handleRowClick = (rowId: UUID) => {
     let newSelected: UUID[];
     
@@ -139,6 +153,25 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
+      {/* NUOVA SEZIONE: Toolbar per azioni selezionate */}
+      {finalSelectedRows.length > 0 && (
+        <div className="p-4 border-b border-gray-100 dark:border-white/0.03">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {finalSelectedRows.length} selected{finalSelectedRows.length > 1 ? 'e' : ''}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              startIcon={<Trash2 className="h-4 w-4" />}
+              onClick={handleDeleteMultiple}
+              className="text-red-500 hover:text-red-700 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
+            >
+              Delete {finalSelectedRows.length} selected{finalSelectedRows.length > 1 ? 's' : ''}
+            </Button>
+          </div>
+        </div>
+      )}
       <div className="max-w-full overflow-x-auto">
           <Table>
             {/* Table Header */}
@@ -226,6 +259,12 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
             </TableBody>
           </Table>
         </div>
+        <DeleteConfirmModal
+          isOpen={openDeleteDialog}
+          onClose={() => setOpenDeleteDialog(false)}
+          onConfirm={confirmDeleteMultiple}
+          count={finalSelectedRows.length}
+        />
     </div>
   );
 }

@@ -8,14 +8,14 @@ import {
   TableRow,
 } from "../ui/table";
 import { useState } from "react";
-import { UUID } from "crypto";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import Button from "../ui/button/Button"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
+import { useModal } from "@/hooks/useModal";
 
 interface Salary {
-  id: UUID;
+  id: string;
   created_at: Date;
   data_busta_paga: Date;
   livello_contratto: string;
@@ -37,22 +37,23 @@ interface ColumnConfig {
   label: string;
   format?: 'date' | 'currency';
   sortable?: boolean;
+  required?: boolean;
 }
 
 type SortDir = 'asc' | 'desc';
 
 interface SalaryTableProps {
   tableData: Salary[];
-  selectedRows?: UUID[];
-  onRowSelect?: (selectedIds: UUID[]) => void;
+  selectedRows?: string[];
+  onRowSelect?: (selectedIds: string[]) => void;
   allowMultiSelect?: boolean;
   serverSortKey: string;
   serverSortDirection: SortDir;
-  onDeleteMultiple?: (ids: UUID[]) => void;
+  onDeleteMultiple?: (ids: string[]) => Promise<void>;
 }
 
 const SALARY_TABLE_CONFIG: ColumnConfig[] = [
-  { key: 'data_busta_paga', label: 'Data Busta', format: 'date' },
+  { key: 'data_busta_paga', label: 'Data Busta', format: 'date', required: true },
   { key: 'livello_contratto', label: 'Livello Contratto' },
   { key: 'retribuzione_base_lorda', label: 'Retrib. Base Lorda', format: 'currency' },
   { key: 'totale_competenze_lorde', label: 'Competenze Lorde', format: 'currency' },
@@ -95,25 +96,27 @@ function formatCellValue(salary: Salary, key: keyof Salary, format?: string) {
   return String(value);
 }
 export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true, serverSortKey, serverSortDirection, onDeleteMultiple}: SalaryTableProps) {
-  const [internalSelectedRows, setInternalSelectedRows] = useState<UUID[]>([]); 
+  const [internalSelectedRows, setInternalSelectedRows] = useState<string[]>([]); 
   const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const [openDeleteDialog, setOpenDeleteDialog] = useState(false)
+  const addModal = useModal();
+  const deleteModal = useModal();
+  const changeModal = useModal();
 
   const handleDeleteMultiple = () => {
     if (finalSelectedRows.length === 0) return
-    setOpenDeleteDialog(true)
+    deleteModal.openModal()
   }
 
   const confirmDeleteMultiple = () => {
-    onDeleteMultiple?.(finalSelectedRows)
-    setOpenDeleteDialog(false)
+    onDeleteMultiple?.(finalSelectedRows.map(id => id.toString()))
+    deleteModal.closeModal()
   }
-  
-  const handleRowClick = (rowId: UUID) => {
-    let newSelected: UUID[];
+
+  const handleRowClick = (rowId: string) => {
+    let newSelected: string[];
     
     if (!allowMultiSelect) {
       // Selezione singola: toggle on/off
@@ -153,13 +156,23 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
-      {/* NUOVA SEZIONE: Toolbar per azioni selezionate */}
-      {finalSelectedRows.length > 0 && (
-        <div className="p-4 border-b border-gray-100 dark:border-white/0.03">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-700 dark:text-gray-300">
-              {finalSelectedRows.length} selected{finalSelectedRows.length > 1 ? 'e' : ''}
-            </span>
+      <div className="p-4 border-b border-gray-100 dark:border-white/0.03">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-700 dark:text-gray-300">
+            {finalSelectedRows.length} selected
+          </span>
+          <div className="flex items-center gap-2">
+            {/* NUOVO: Bottone Add */}
+            <Button
+              size="sm"
+              variant="outline"
+              startIcon={<Plus className="h-4 w-4" />}
+              onClick={() => addModal.openModal()}
+              className="text-green-600 hover:text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/20"
+            >
+              Add
+            </Button>
+            {/* Delete esistente */}
             <Button
               size="sm"
               variant="outline"
@@ -167,11 +180,11 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
               onClick={handleDeleteMultiple}
               className="text-red-500 hover:text-red-700 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
             >
-              Delete {finalSelectedRows.length} selected{finalSelectedRows.length > 1 ? 's' : ''}
+              {`Delete${finalSelectedRows.length > 0 ? ` ${finalSelectedRows.length} selected`: ''}`}
             </Button>
           </div>
         </div>
-      )}
+      </div>
       <div className="max-w-full overflow-x-auto">
           <Table>
             {/* Table Header */}
@@ -260,8 +273,8 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
           </Table>
         </div>
         <DeleteConfirmModal
-          isOpen={openDeleteDialog}
-          onClose={() => setOpenDeleteDialog(false)}
+          isOpen={deleteModal.isOpen}
+          onClose={() => deleteModal.closeModal()}
           onConfirm={confirmDeleteMultiple}
           count={finalSelectedRows.length}
         />

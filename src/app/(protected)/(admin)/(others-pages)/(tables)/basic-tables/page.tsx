@@ -1,6 +1,6 @@
 import ComponentCard from "@/components/common/ComponentCard";
 import Pagination from "@/components/tables/Pagination";
-import SalaryTable from "@/components/tables/SalaryTable";
+import SalaryTable, { Salary } from "@/components/tables/SalaryTable";
 import { createClient } from "@/lib/supabase/server";
 import { Metadata } from "next";
 import { redirect } from 'next/navigation'
@@ -18,16 +18,42 @@ interface SalaryPageProps {
   searchParams: Promise<{ page?: string; sortBy?: string; sortDir?: SortDir }>;
 }
 
-async function handleAdd(data: Record<string, string | number | Date>) {
+// 🚀 NUOVA ACTION PER CREARE RECORD
+async function handleCreateRecord(formData: FormData) {
   'use server'
-  const supabase = await createClient()
+  const supabase = await createClient();
   
+  // ✅ Converte FormData → Object
+  const data = Object.fromEntries(formData.entries());
+  
+  // ✅ Converte tipi corretti per Supabase
+  const payload: Partial<Salary> = {
+    data_busta_paga: data.data_busta_paga ? new Date(data.data_busta_paga as string) : undefined,
+    livello_contratto: data.livello_contratto as string,
+    retribuzione_base_lorda: parseFloat(data.retribuzione_base_lorda as string) || 0,
+    totale_competenze_lorde: parseFloat(data.totale_competenze_lorde as string) || 0,
+    irpef_lorda: parseFloat(data.irpef_lorda as string) || 0,
+    totale_trattenute: parseFloat(data.totale_trattenute as string) || 0,
+    netto_busta_paga: parseFloat(data.netto_busta_paga as string) || 0,
+    quota_tfr_lorda: parseFloat(data.quota_tfr_lorda as string) || 0,
+    ferie_residue: parseInt(data.ferie_residue as string) || 0,
+    permessi_residui: parseInt(data.permessi_residui as string) || 0,
+    ore_ordinarie: parseFloat(data.ore_ordinarie as string) || 0,
+    ore_straordinario: parseFloat(data.ore_straordinario as string) || 0,
+    straordinario_pagato_lordo: parseFloat(data.straordinario_pagato_lordo as string) || 0,
+  };
+
   const { error } = await supabase
     .from('Salary')
-    .insert(data)
+    .insert(payload);
 
-  if (error) throw error
-  redirect('/salaries?page=1')
+  if (error) {
+    console.error('❌ Create error:', error);
+    throw error;
+  }
+
+  console.log('✅ CREATO record Salary');
+  redirect('/basic-tables?page=1'); 
 }
 
 async function handleDeleteMultiple(ids: string[]) { 
@@ -45,7 +71,7 @@ async function handleDeleteMultiple(ids: string[]) {
   }
   
   console.log('✅ Deleted:', ids.length, 'rows')
-  redirect('/salaries?page=1')  // Refresh pagina
+  redirect('/basic-tables?page=1')  // Refresh pagina
 }
 
 async function fetchData(page: number = 1, limit: number = 8, sortBy: string = 'data_busta_paga', sortDir: SortDir = 'desc') {
@@ -102,6 +128,7 @@ export default async function DataTables({ searchParams }: SalaryPageProps) {
             serverSortKey={sortBy} 
             serverSortDirection={sortDir}
             onDeleteMultiple={handleDeleteMultiple}
+            onAdd={handleCreateRecord}
             />
         </ComponentCard>
         {totalPages > 1 && (

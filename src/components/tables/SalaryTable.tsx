@@ -13,8 +13,9 @@ import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
 import Button from "../ui/button/Button"
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal"
 import { useModal } from "@/hooks/useModal";
+import { AddModalForm } from "../modals/AddModalForm";
 
-interface Salary {
+export interface Salary {
   id: string;
   created_at: Date;
   data_busta_paga: Date;
@@ -32,10 +33,10 @@ interface Salary {
   straordinario_pagato_lordo: number;
 }
 
-interface ColumnConfig {
+export interface ColumnConfig {
   key: keyof Salary;
   label: string;
-  format?: 'date' | 'currency';
+  format: 'date' | 'currency' | 'number' | 'text';
   sortable?: boolean;
   required?: boolean;
 }
@@ -50,21 +51,22 @@ interface SalaryTableProps {
   serverSortKey: string;
   serverSortDirection: SortDir;
   onDeleteMultiple?: (ids: string[]) => Promise<void>;
+  onAdd?: (formData: FormData) => Promise<void>;
 }
 
 const SALARY_TABLE_CONFIG: ColumnConfig[] = [
   { key: 'data_busta_paga', label: 'Data Busta', format: 'date', required: true },
-  { key: 'livello_contratto', label: 'Livello Contratto' },
+  { key: 'livello_contratto', label: 'Livello Contratto', format: 'text' },
   { key: 'retribuzione_base_lorda', label: 'Retrib. Base Lorda', format: 'currency' },
   { key: 'totale_competenze_lorde', label: 'Competenze Lorde', format: 'currency' },
   { key: 'irpef_lorda', label: 'IRPEF Lorda', format: 'currency' },
   { key: 'totale_trattenute', label: 'Totale Trattenute', format: 'currency' },
   { key: 'netto_busta_paga', label: 'Netto Busta', format: 'currency' },
   { key: 'quota_tfr_lorda', label: 'Quota TFR Lorda', format: 'currency' },
-  { key: 'ferie_residue', label: 'Ferie Residue' },
-  { key: 'permessi_residui', label: 'Permessi Residui' },
-  { key: 'ore_ordinarie', label: 'Ore Ordinarie' },
-  { key: 'ore_straordinario', label: 'Ore Straordinarie' },
+  { key: 'ferie_residue', label: 'Ferie Residue', format: 'number' },
+  { key: 'permessi_residui', label: 'Permessi Residui', format: 'number' },
+  { key: 'ore_ordinarie', label: 'Ore Ordinarie', format: 'number' },
+  { key: 'ore_straordinario', label: 'Ore Straordinarie', format: 'number' },
   { key: 'straordinario_pagato_lordo', label: 'Straord. Pagato', format: 'currency' },
 ];
 
@@ -95,7 +97,17 @@ function formatCellValue(salary: Salary, key: keyof Salary, format?: string) {
   // Stringhe e altro
   return String(value);
 }
-export default function SalaryTable({ tableData, selectedRows = [], onRowSelect, allowMultiSelect = true, serverSortKey, serverSortDirection, onDeleteMultiple}: SalaryTableProps) {
+
+export default function SalaryTable({ 
+  tableData, 
+  selectedRows = [], 
+  onRowSelect,
+  allowMultiSelect = true, 
+  serverSortKey, 
+  serverSortDirection, 
+  onDeleteMultiple,
+  onAdd,
+}: SalaryTableProps) {
   const [internalSelectedRows, setInternalSelectedRows] = useState<string[]>([]); 
   const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
   const router = useRouter();
@@ -103,17 +115,36 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
   const pathname = usePathname();
   const addModal = useModal();
   const deleteModal = useModal();
-  const changeModal = useModal();
+
+  const confirmAddRecord = async (formData: FormData) => {
+    try {
+      await onAdd?.(formData);
+      addModal.closeModal();
+    } catch (error) {
+      console.error("Errore aggiunta record:", error);
+    }
+  };
 
   const handleDeleteMultiple = () => {
     if (finalSelectedRows.length === 0) return
     deleteModal.openModal()
   }
 
-  const confirmDeleteMultiple = () => {
-    onDeleteMultiple?.(finalSelectedRows.map(id => id.toString()))
-    deleteModal.closeModal()
-  }
+  const confirmDeleteMultiple = async () => {
+    try {
+      await onDeleteMultiple?.(finalSelectedRows.map(id => id.toString()));
+      
+      // 🚀 RESET STATO SELEZIONE (UNICO POSTO CORRETTO)
+      if (selectedRows.length === 0) {
+        setInternalSelectedRows([]);  // ✅ OK qui - dopo await
+      }
+      onRowSelect?.([]);
+      
+      deleteModal.closeModal();
+    } catch (error) {
+      console.error("Errore delete:", error);
+    }
+  };
 
   const handleRowClick = (rowId: string) => {
     let newSelected: string[];
@@ -174,14 +205,22 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
             </Button>
             {/* Delete esistente */}
             <Button
-              size="sm"
-              variant="outline"
-              startIcon={<Trash2 className="h-4 w-4" />}
-              onClick={handleDeleteMultiple}
-              className="text-red-500 hover:text-red-700 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
-            >
-              {`Delete${finalSelectedRows.length > 0 ? ` ${finalSelectedRows.length} selected`: ''}`}
-            </Button>
+            size="sm"
+            variant="outline"
+            startIcon={<Trash2 className="h-4 w-4" />}
+            onClick={handleDeleteMultiple}
+            disabled={finalSelectedRows.length === 0}
+            className={`${
+              finalSelectedRows.length === 0 
+                ? "text-gray-400 cursor-not-allowed" 
+                : "text-red-500 hover:text-red-700 border-red-200 hover:bg-red-50 dark:text-red-400 dark:border-red-800 dark:hover:bg-red-950/20"
+            }`}
+          >
+            {finalSelectedRows.length > 0 
+              ? `Delete ${finalSelectedRows.length}` 
+              : ""
+            }
+          </Button>
           </div>
         </div>
       </div>
@@ -277,6 +316,13 @@ export default function SalaryTable({ tableData, selectedRows = [], onRowSelect,
           onClose={() => deleteModal.closeModal()}
           onConfirm={confirmDeleteMultiple}
           count={finalSelectedRows.length}
+        />
+        <AddModalForm 
+          isOpen={addModal.isOpen}
+          onClose={() => addModal.closeModal()}
+          onConfirm={confirmAddRecord}
+          schema={SALARY_TABLE_CONFIG}
+          title="Nuova Busta Paga"
         />
     </div>
   );

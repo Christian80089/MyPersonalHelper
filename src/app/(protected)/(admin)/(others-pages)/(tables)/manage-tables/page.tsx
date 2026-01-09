@@ -2,6 +2,7 @@
 import ComponentCard from "@/components/common/ComponentCard";
 import GenericTable from "@/components/tables/GenericTable";
 import Pagination from "@/components/tables/Pagination";
+import { TableColumnConfig } from "@/types/table";
 import { fetchTableDataGeneric } from '@/utils/actions';
 import get_table_schema from "@/utils/db";
 
@@ -31,7 +32,7 @@ export default async function GenericTablePage({
     tableName, page, 8, sortBy, sortDir
   );
   
-  const schema = await get_table_schema<any>(tableName);  // any per genericità
+  const schema: TableColumnConfig[] = await get_table_schema(tableName);  // any per genericità
 
   console.log(`📊 ${tableName}:`, { page, count: tableData.length, totalPages });
 

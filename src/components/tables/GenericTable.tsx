@@ -1,5 +1,14 @@
 'use client';
 
+import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
+import { useModal } from "@/hooks/useModal";
+import { TableColumnConfig } from '@/types/table';
+import { createRecord, deleteRecords } from '@/utils/actions';
+import { ArrowDown, ArrowUp, ArrowUpDown, Plus, Trash2 } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { AddModalForm } from "../modals/AddModalForm";
+import Button from "../ui/button/Button";
 import {
   Table,
   TableBody,
@@ -7,15 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { useState } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowUpDown, ArrowUp, ArrowDown, Trash2, Plus } from "lucide-react";
-import Button from "../ui/button/Button";
-import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
-import { useModal } from "@/hooks/useModal";
-import { AddModalForm } from "../modals/AddModalForm";
-import { deleteRecords, createRecord } from '@/utils/actions';
-import { TableColumnConfig } from '@/types/table';
 
 // 🚀 INTERFACCIA GENERICA PER QUALSIASI TABELLA
 export interface TableRowData {
@@ -261,6 +261,7 @@ export default function GenericTable<T extends TableRowData>({
         onClose={() => addModal.closeModal()}
         onConfirm={confirmAddRecord}
         schema={schema}
+        tableName={tableName}
       />
     </div>
   );

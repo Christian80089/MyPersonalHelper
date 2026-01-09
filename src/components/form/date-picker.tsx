@@ -8,6 +8,7 @@ import DateOption = flatpickr.Options.DateOption;
 
 type PropsType = {
   id: string;
+  name?: string;
   mode?: "single" | "multiple" | "range" | "time";
   onChange?: Hook | Hook[];
   defaultDate?: DateOption;
@@ -17,6 +18,7 @@ type PropsType = {
 
 export default function DatePicker({
   id,
+  name = id,
   mode,
   onChange,
   label,
@@ -24,14 +26,17 @@ export default function DatePicker({
   placeholder,
 }: PropsType) {
   useEffect(() => {
-    const flatPickr = flatpickr(`#${id}`, {
-      mode: mode || "single",
-      static: true,
-      monthSelectorType: "static",
-      dateFormat: "Y-m-d",
-      defaultDate,
-      onChange,
-    });
+  const flatPickr = flatpickr(`#${id}`, {
+    mode: mode || "single",
+    inline: false,           
+    altFormat: "d/m/Y",  // ✅ Visualizza 09/01/2026
+    dateFormat: "Y-m-d", // ✅ Input nascosto: 2026-01-09 (ISO)
+    defaultDate,
+    onChange,
+    // ✅ ANTI-OVERFLOW MODAL
+    appendTo: document.body,
+    conjunction: ",",
+  });
 
     return () => {
       if (!Array.isArray(flatPickr)) {
@@ -47,6 +52,7 @@ export default function DatePicker({
       <div className="relative">
         <input
           id={id}
+          name={name}
           placeholder={placeholder}
           className="h-11 w-full rounded-lg border appearance-none px-4 py-2.5 text-sm shadow-theme-xs placeholder:text-gray-400 focus:outline-hidden focus:ring-3  dark:bg-gray-900 dark:text-white/90 dark:placeholder:text-white/30  bg-transparent text-gray-800 border-gray-300 focus:border-brand-300 focus:ring-brand-500/20 dark:border-gray-700  dark:focus:border-brand-800"
         />

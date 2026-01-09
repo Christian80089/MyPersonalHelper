@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { TableColumnConfig, TableRowData } from "@/components/tables/GenericTable";
 import { createClient } from "@/lib/supabase/client";
+import { TableColumnConfig } from '@/types/table';
 
-// Aggiungi NELLA tua pagina (o utils/db.ts)
 interface SupabaseColumnInfo {
   column_name: string;
   data_type: string;
@@ -20,8 +19,8 @@ function mapSupabaseTypeToFormat(dataType: string): 'date' | 'currency' | 'numbe
     'date': 'date',
     
     // Numbers
-    'numeric': 'currency',
-    'decimal': 'currency',
+    'numeric': 'number',
+    'decimal': 'number',
     'double precision': 'number',
     'real': 'number',
     'bigint': 'number',
@@ -41,9 +40,9 @@ function mapSupabaseTypeToFormat(dataType: string): 'date' | 'currency' | 'numbe
   return typeMap[dataType] || 'text';
 }
 
-export default async function get_table_schema<T extends TableRowData>(
+export default async function get_table_schema(
   tableName: string
-): Promise<TableColumnConfig<T>[]> {
+): Promise<TableColumnConfig[]> {
   const supabase = await createClient();
   
   const { data, error } = await supabase.rpc('get_table_schema', { 
@@ -61,8 +60,8 @@ export default async function get_table_schema<T extends TableRowData>(
       !col.column_name.startsWith('private_') &&
       !['password', 'created_at', 'updated_at', 'user_id'].includes(col.column_name)
     )
-    .map((col): TableColumnConfig<T> => {
-      const key = col.column_name as keyof T;
+    .map((col): TableColumnConfig => {
+      const key = col.column_name as string;
       
       return {
         key,

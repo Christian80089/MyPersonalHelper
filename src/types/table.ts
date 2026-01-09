@@ -38,7 +38,9 @@ export function castFormValue(
       return isNaN(num) ? null : num;
       
     case 'date':
-      return trimmed;
+      if (!trimmed) return null;
+      const date = new Date(trimmed);  // Ora sempre ISO!
+      return date.toISOString().split('T')[0];  // Ridondante ma safe
       
     case 'boolean':
       return trimmed.toLowerCase() === 'true' || trimmed === '1' || trimmed === 'yes';

@@ -120,6 +120,69 @@ export async function createRecord(
   }
 }
 
+// 🚀 FETCH DISTINCT VALUES (NUOVA!)
+interface DistinctOptionsResult {
+  success: boolean;
+  options: Record<string, string[]>;
+  error?: string;
+}
+
+export async function fetchDistinctOptions(
+  tableName: string,
+  columns: string[]
+): Promise<DistinctOptionsResult> {
+  try {
+    if (!tableName || typeof tableName !== 'string') {
+      throw new Error('Nome tabella non valido');
+    }
+
+    if (!columns?.length || !columns.every(col => typeof col === 'string')) {
+      throw new Error('Colonne non valide');
+    }
+
+    const supabase = await createClient();
+    const options: Record<string, string[]> = {};
+
+    // 🚀 Fetch parallelo per performance
+    const promises = columns.map(async (column) => {
+      const { data, error } = await supabase
+        .from(tableName)
+        .select(column)
+        .not(column, 'is', null)
+        .not(column, 'eq', '');
+
+      if (error) {
+        console.warn(`⚠️ Distinct failed for ${column}:`, error.message);
+        return;
+      }
+
+      // ✅ Distinct + filtro vuoti
+      const distinctValues = Array.from(
+        new Set(data?.map((row: any) => row[column]).filter(Boolean) ?? [])
+      ).sort();
+
+      options[column] = distinctValues;
+    });
+
+    await Promise.all(promises);
+
+    console.log('✅ Distinct Options:', { tableName, options });
+
+    return {
+      success: true,
+      options
+    };
+
+  } catch (error) {
+    console.error('💥 fetchDistinctOptions CRASH:', error);
+    return {
+      success: false,
+      options: {},
+      error: error instanceof Error ? error.message : 'Errore sconosciuto'
+    };
+  }
+}
+
 // 🚀 FUNZIONE FETCH GENERICA
 export async function fetchTableDataGeneric(
   tableName: string,

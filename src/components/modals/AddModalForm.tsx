@@ -1,10 +1,13 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import { TableColumnConfig, castFormValue } from '@/types/table';
+import { fetchDistinctOptions } from "@/utils/actions";
+import Switch from "../form/switch/Switch";
+import DatePicker from "../form/date-picker";
 
 interface AddModalFormProps {
   isOpen: boolean;
@@ -12,6 +15,7 @@ interface AddModalFormProps {
   onConfirm: (formData: FormData) => Promise<void>;
   schema: TableColumnConfig[];
   title?: string;
+  tableName?: string;
 }
 
 export const AddModalForm: React.FC<AddModalFormProps> = ({
@@ -20,8 +24,37 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   onConfirm,
   schema,
   title = "Nuovo Record",
+  tableName,
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
+  // ✅ NUOVI STATI
+  const [dropdownStates, setDropdownStates] = useState<{[key: string]: boolean}>({});
+  const [distinctOptions, setDistinctOptions] = useState<{[key: string]: string[]}>({});
+  const [loadingOptions, setLoadingOptions] = useState(false);
+
+  // ✅ FETCH DISTINCT quando modal apre
+  React.useEffect(() => {
+    if (isOpen && tableName) {
+      const textColumns = schema
+        .filter((col): col is TableColumnConfig & { format: 'text' } => col.format === 'text')
+        .map(col => col.key);
+      
+      if (textColumns.length > 0) {
+        setLoadingOptions(true);
+        fetchDistinctOptions(tableName, textColumns)
+          .then(({ success, options }) => {
+            if (success) {
+              setDistinctOptions(options);
+            }
+          })
+          .finally(() => setLoadingOptions(false));
+      }
+    }
+  }, [isOpen, tableName, schema]);
+
+  const toggleDropdown = (key: string) => {
+    setDropdownStates(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -38,7 +71,7 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
       
       if (required && castedValue === null) {
         hasErrors = true;
-        alert(`Campo "${label}" (${key}) è obbligatorio!`);
+        alert(`The field "${label}" (${key}) is mandatory!`);
         return;
       }
     });
@@ -64,15 +97,20 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
     }
   };
 
-  const getPlaceholder = (format?: TableColumnConfig['format'], label?: string): string => {
-    switch (format) {
-      case 'currency': return '0,00 €';
-      case 'number': return '0';
-      case 'date': return '2026-01-01';
-      case 'boolean': return 'Sì/No';
-      default: return `Inserisci ${label}`;
-    }
-  };
+ const getPlaceholder = (format?: TableColumnConfig['format'], label?: string): string => {
+  switch (format) {
+    case 'currency':
+      return '0,00 €';
+    case 'number':
+      return '0';
+    case 'date':
+      return new Date().toLocaleDateString('it-IT');
+    case 'boolean':
+      return 'Sì/No';
+    default:
+      return label ? `Inserisci ${label}` : 'Inserisci valore';
+  }
+};
 
   return (
     <Modal 
@@ -88,21 +126,61 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
         <div className="grid grid-cols-1 gap-3 sm:gap-x-4 sm:gap-y-5 md:grid-cols-2">
           {schema.map(({ key, label, format, required }) => (
             <div key={key} className="w-full">
-              <Label 
-                htmlFor={key}
-                className={`block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2 ${
-                  required ? "after:content-['*'] after:ml-0.5 after:text-red-500" : ""
-                }`}
-              >
-                {label}
-              </Label>
-              <Input 
-                id={key}
-                name={key}
-                type={getInputType(format)}
-                className="w-full"
-                placeholder={getPlaceholder(format, label)}
-              />
+              {/* ✅ HEADER CON CHECKBOX */}
+              <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                <Label 
+                  htmlFor={key}
+                  className={`block text-sm font-medium text-gray-700 dark:text-gray-300 flex-1 pr-3 ${
+                    required ? "after:content-['*'] after:ml-0.5 after:text-red-500" : ""
+                  }`}
+                >
+                  {label}
+                </Label>
+                
+                {/* ✅ IL TUO SWITCH COMPONENT */}
+                {format === 'text' && (
+                  <Switch
+                    defaultChecked={dropdownStates[key] || false}  // Controllato dallo stato
+                    onChange={() => toggleDropdown(key)}  // Callback
+                    color="blue"
+                  />
+                )}
+              </div>
+
+              {/* ✅ INPUT CONDIZIONALE COMPLETO */}
+              {format === 'date' ? (
+                /* ✅ DATEPICKER */
+                <DatePicker
+                  id={key}
+                  name={key}
+                  placeholder={getPlaceholder(format, label)}
+                />
+              ) : format === 'text' && dropdownStates[key] ? (
+                /* DROPDOWN */
+                <select
+                  id={key}
+                  name={key}
+                  className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
+                  defaultValue=""
+                >
+                  <option value="">Seleziona {label}...</option>
+                  {(distinctOptions[key]?.length ? distinctOptions[key] : []).map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                  {loadingOptions && <option disabled>Caricamento...</option>}
+                </select>
+              ) : (
+                /* INPUT NORMALE */
+                <Input 
+                  id={key}
+                  name={key}
+                  type={getInputType(format)}
+                  className="w-full"
+                  placeholder={getPlaceholder(format, label)}
+                />
+              )}
             </div>
           ))}
         </div>

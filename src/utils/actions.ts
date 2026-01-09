@@ -45,8 +45,8 @@ export async function deleteRecords(tableName: string, ids: string[]): Promise<D
     console.log('✅ Delete Success:', { tableName, deleted: data?.length || 0 });
 
     // 🚀 Revalidate
-    revalidatePath(`/basic-table`);
-    revalidatePath(`/basic-table?*`);
+    revalidatePath(`/manage-tables`);
+    revalidatePath(`/manage-tables?*`);
 
     return {
       success: true,
@@ -107,8 +107,8 @@ export async function createRecord(
       throw new Error(error.message);
     }
 
-    revalidatePath(`/basic-table`);
-    revalidatePath(`/basic-table?*`);
+    revalidatePath(`/manage-tables`);
+    revalidatePath(`/manage-tables?*`);
 
     return { success: true, id: inserted?.id as string };
 

@@ -5,6 +5,104 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { TableColumnConfig, castFormValue } from '@/types/table';
 
+interface UpdateResult {
+  success: boolean;
+  id: string;
+  error?: string;
+}
+
+export async function updateRecord(
+  tableName: string,
+  recordId: string,
+  formData: FormData,
+  schema: TableColumnConfig[]  // ✅ Usa lo stesso schema di createRecord
+): Promise<UpdateResult> {
+  try {
+    // ✅ Validazione input (stile tuo codice)
+    if (!tableName || typeof tableName !== 'string') {
+      throw new Error('Nome tabella non valido');
+    }
+
+    if (!recordId || typeof recordId !== 'string') {
+      throw new Error('ID record non valido');
+    }
+
+    const supabase = await createClient();
+    const rawData = Object.fromEntries(formData.entries());
+
+    console.log('📤 Raw FormData UPDATE:', { tableName, recordId, rawData });
+
+    // 🚀 1. VERIFICA RECORD ESISTENTE (sicurezza)
+    const { data: existingRecord, error: fetchError } = await supabase
+      .from(tableName)
+      .select('id')
+      .eq('id', recordId.trim())
+      .select('id');
+
+    if (fetchError || !existingRecord) {
+      console.error('❌ Record non trovato:', { tableName, recordId, fetchError });
+      throw new Error(`Record con ID ${recordId} non trovato`);
+    }
+
+    // 🚀 2. CAST usando SCHEMA (UGUALE A CREATE RECORD!)
+    const castedData: Record<string, any> = {};
+    
+    schema.forEach(col => {
+      const rawValue = rawData[col.key];
+      
+      // Skip ID (non modificabile)
+      if (col.key === 'id') return;
+      
+      if (rawValue !== undefined) {
+        castedData[col.key] = castFormValue(rawValue as string, col.format);
+      }
+    });
+
+    console.log('🔮 Casted Update Data:', castedData);
+
+    if (Object.keys(castedData).length === 0) {
+      throw new Error('Nessun campo modificato');
+    }
+
+    // 🚀 3. ESEGUI UPDATE
+    const { data: updated, error: updateError } = await supabase
+      .from(tableName)
+      .update(castedData)
+      .eq('id', recordId.trim())
+      .select('id');
+
+    if (updateError) {
+      console.error('❌ Update Error:', {
+        tableName,
+        recordId,
+        error: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint
+      });
+      throw new Error(`Errore update: ${updateError.message}`);
+    }
+
+    console.log('✅ Update Success:', { tableName, recordId, updated });
+
+    // 🚀 4. Revalidate (UGUALE ALLE ALTRE FUNZIONI)
+    revalidatePath(`/manage-tables`);
+    revalidatePath(`/manage-tables?*`);
+
+    return {
+      success: true,
+      id: recordId
+    };
+
+  } catch (error) {
+    console.error('💥 UpdateRecord CRASH:', error);
+    return {
+      success: false,
+      id: recordId,
+      error: error instanceof Error ? error.message : 'Errore sconosciuto'
+    };
+  }
+}
+
 interface DeleteResult {
   success: boolean;
   deletedCount: number;

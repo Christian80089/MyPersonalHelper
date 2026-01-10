@@ -1,10 +1,10 @@
 "use client";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
-import { TableColumnConfig, castFormValue } from '@/types/table';
+import { TableColumnConfig, TableRowData, castFormValue } from '@/types/table';
 import { fetchDistinctOptions } from "@/utils/actions";
 import Switch from "../form/switch/Switch";
 import DatePicker from "../form/date-picker";
@@ -16,6 +16,9 @@ interface AddModalFormProps {
   schema: TableColumnConfig[];
   title?: string;
   tableName?: string;
+  initialData?: TableRowData;
+  isEditMode?: boolean;
+  lastRowData?: TableRowData;
 }
 
 export const AddModalForm: React.FC<AddModalFormProps> = ({
@@ -25,13 +28,72 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   schema,
   title = "Nuovo Record",
   tableName,
+  initialData,
+  isEditMode = false,
+  lastRowData,
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   // ✅ NUOVI STATI
   const [dropdownStates, setDropdownStates] = useState<{[key: string]: boolean}>({});
   const [distinctOptions, setDistinctOptions] = useState<{[key: string]: string[]}>({});
   const [loadingOptions, setLoadingOptions] = useState<{[key: string]: boolean}>({});
+  const [copyLastRow, setCopyLastRow] = useState(false);
 
+  useEffect(() => {
+    if (!formRef.current || !isOpen) {
+    // ✅ MODAL CHIUSO → Reset switch (mantiene dati last record)
+    if (!isOpen) {
+      setDropdownStates({});
+    }
+    return;
+  }
+
+    if (isEditMode && initialData) {
+      // EDIT MODE: precompila dati riga
+      schema.forEach(({ key, format }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field && initialData[key] !== null && initialData[key] !== undefined) {
+          let displayValue = String(initialData[key]);
+          if (format === 'date') {
+            displayValue = new Date(initialData[key] as Date).toISOString().split('T')[0];
+          }
+          field.value = displayValue;
+          
+        }
+      });
+    } else if (!isEditMode && copyLastRow && lastRowData) {
+      // ADD MODE + Switch ON: copia ultima riga
+      schema.forEach(({ key, format }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field && lastRowData[key] !== null && lastRowData[key] !== undefined && key !== 'id') {
+          let displayValue = String(lastRowData[key]);
+          if (format === 'date') {
+            displayValue = new Date(lastRowData[key] as Date).toISOString().split('T')[0];
+          }
+          field.value = displayValue;
+        
+        }
+      });
+    }
+  }, [isOpen, initialData, isEditMode, copyLastRow, lastRowData, schema]);
+
+  const handleCopyLastRowToggle = useCallback(() => {
+    const newValue = !copyLastRow;
+    setCopyLastRow(newValue);
+    
+    // ✅ SE DISATTIVI → PULISCI TUTTI I CAMPI
+    if (!newValue && formRef.current) {
+      schema.forEach(({ key }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field) {
+          field.value = '';
+        }
+      });
+      // Reset dropdown states
+      setDropdownStates({});
+    }
+  }, [copyLastRow, schema]);
+  
   // ✅ FETCH DISTINCT quando modal apre
   const fetchOptionsForColumn = useCallback(async (columnKey: string) => {
     if (!tableName || !isOpen) return;
@@ -127,6 +189,20 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
           {title}
         </h4>
 
+        {/* ✅ SWITCH "COPIA ULTIMA RIGA" - SOLO ADD MODE */}
+        {!isEditMode && lastRowData && (
+          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/30 dark:border-blue-800">
+            <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Fill with last row data
+            </Label>
+            <Switch
+              defaultChecked={copyLastRow}
+              onChange={handleCopyLastRowToggle}
+              color="blue"
+            />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-3 sm:gap-x-4 sm:gap-y-5 md:grid-cols-2">
           {schema.map(({ key, label, format, required }) => (
             <div key={key} className="w-full">
@@ -204,7 +280,7 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
             onClick={handleSubmit}
             className="w-full sm:w-auto flex-1 sm:flex-none min-w-[120px] sm:min-w-[110px]"
           >
-            Aggiungi Record
+             {isEditMode ? 'Aggiorna Record' : 'Aggiungi Record'}
           </Button>
         </div>
       </form>

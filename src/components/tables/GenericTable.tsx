@@ -2,11 +2,11 @@
 
 import { DeleteConfirmModal } from "@/components/modals/DeleteConfirmModal";
 import { useModal } from "@/hooks/useModal";
-import { TableColumnConfig } from '@/types/table';
-import { createRecord, deleteRecords } from '@/utils/actions';
+import { TableColumnConfig, TableRowData } from '@/types/table';
+import { createRecord, deleteRecords, updateRecord } from '@/utils/actions';
 import { ArrowDown, ArrowUp, ArrowUpDown, Plus, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { AddModalForm } from "../modals/AddModalForm";
 import Button from "../ui/button/Button";
 import {
@@ -16,12 +16,6 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-
-// 🚀 INTERFACCIA GENERICA PER QUALSIASI TABELLA
-export interface TableRowData {
-  id: string;
-  [key: string]: string | number | Date | null;
-}
 
 // 🚀 PROPS GENERICHE TYPE-SAFE
 type SortDir = 'asc' | 'desc';
@@ -35,6 +29,7 @@ interface GenericTableProps<T extends TableRowData> {
   serverSortKey: string;
   serverSortDirection: SortDir;
   schema?: TableColumnConfig[];
+  lastRowData?: T; // Per copia ultimo record
 }
 
 // 🚀 FUNZIONE FORMAT GENERICA
@@ -79,7 +74,8 @@ export default function GenericTable<T extends TableRowData>({
   serverSortDirection, 
   schema: propSchema,  // Schema opzionale da props
 }: GenericTableProps<T>) {
-  const [internalSelectedRows, setInternalSelectedRows] = useState<string[]>([]); 
+  const [internalSelectedRows, setInternalSelectedRows] = useState<string[]>([]);
+  const [editRowData, setEditRowData] = useState<T | null>(null);
   const finalSelectedRows = selectedRows.length > 0 ? selectedRows : internalSelectedRows;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,16 +84,40 @@ export default function GenericTable<T extends TableRowData>({
   const deleteModal = useModal();
 
   // 🚀 SCHEMA DA SUPABASE (se non fornito via props)
-  const schema: TableColumnConfig[] = propSchema || []; // Integrazione con get_table_schema
+  const schema = useMemo(() => propSchema || [], [propSchema]); // Integrazione con get_table_schema
 
-  const confirmAddRecord = async (formData: FormData) => {
+  console.log('🔍 DEBUG SCHEMA:', {
+    propSchema: propSchema,
+    schema: schema,
+    schemaKeys: schema.map(s => s.key),
+    hasId: schema.some(s => s.key === 'id'),
+    tableDataLength: tableData.length,
+    firstRowKeys: tableData[0] ? Object.keys(tableData[0]) : 'no data'
+  });
+
+  const handleModalConfirm = useCallback(async (formData: FormData) => {
     try {
-      await createRecord(tableName, formData, schema);
+      if (editRowData) {
+        // UPDATE
+        const result = await updateRecord(tableName, editRowData.id, formData, schema);
+        if (!result.success) throw new Error(result.error || 'Update fallito');
+      } else {
+        // ADD
+        const result = await createRecord(tableName, formData, schema);
+        if (!result.success) throw new Error(result.error || 'Creazione fallita');
+      }
+      
       addModal.closeModal();
+      setEditRowData(null);
     } catch (error) {
-      console.error(`Errore aggiunta ${tableName}:`, error);
+      console.error('❌ Errore:', error);
     }
-  };
+  }, [editRowData, tableName, schema, addModal, setEditRowData]);
+
+  const handleDoubleClick = useCallback((row: T) => {
+    setEditRowData(row);
+    addModal.openModal();
+  }, [addModal]);
 
   const handleDeleteMultiple = () => {
     if (finalSelectedRows.length === 0) return;
@@ -233,6 +253,7 @@ export default function GenericTable<T extends TableRowData>({
                     isSelected ? 'bg-blue-50 border-l-4 border-l-blue-500 dark:bg-blue-500/[0.08]' : ''
                   }`}
                   onClick={() => handleRowClick(row.id)}
+                  onDoubleClick={() => handleDoubleClick(row)}
                 >
                   {schema.map((column) => (
                     <TableCell 
@@ -258,10 +279,17 @@ export default function GenericTable<T extends TableRowData>({
 
       <AddModalForm
         isOpen={addModal.isOpen}
-        onClose={() => addModal.closeModal()}
-        onConfirm={confirmAddRecord}
+        onClose={() => {
+          addModal.closeModal();
+          setEditRowData(null);
+        }}
+        onConfirm={handleModalConfirm}
         schema={schema}
         tableName={tableName}
+        initialData={editRowData || undefined}
+        isEditMode={!!editRowData}
+        title={editRowData ? `Modifica Record` : `Nuovo Record`}
+        lastRowData={tableData[0]}
       />
     </div>
   );

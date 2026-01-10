@@ -18,6 +18,7 @@ interface AddModalFormProps {
   tableName?: string;
   initialData?: TableRowData;
   isEditMode?: boolean;
+  lastRowData?: TableRowData;
 }
 
 export const AddModalForm: React.FC<AddModalFormProps> = ({
@@ -29,34 +30,69 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   tableName,
   initialData,
   isEditMode = false,
+  lastRowData,
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   // ✅ NUOVI STATI
   const [dropdownStates, setDropdownStates] = useState<{[key: string]: boolean}>({});
   const [distinctOptions, setDistinctOptions] = useState<{[key: string]: string[]}>({});
   const [loadingOptions, setLoadingOptions] = useState<{[key: string]: boolean}>({});
+  const [copyLastRow, setCopyLastRow] = useState(false);
 
   useEffect(() => {
-    if (isOpen && initialData && formRef.current && isEditMode) {
+    if (!formRef.current || !isOpen) {
+    // ✅ MODAL CHIUSO → Reset switch (mantiene dati last record)
+    if (!isOpen) {
+      setDropdownStates({});
+    }
+    return;
+  }
+
+    if (isEditMode && initialData) {
+      // EDIT MODE: precompila dati riga
       schema.forEach(({ key, format }) => {
         const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
         if (field && initialData[key] !== null && initialData[key] !== undefined) {
-          
-          // ✅ FORMATTA valore per il campo
           let displayValue = String(initialData[key]);
-          
           if (format === 'date') {
             displayValue = new Date(initialData[key] as Date).toISOString().split('T')[0];
-          } else if (format === 'currency' || format === 'number') {
-            displayValue = String(initialData[key]);
           }
+          field.value = displayValue;
           
+        }
+      });
+    } else if (!isEditMode && copyLastRow && lastRowData) {
+      // ADD MODE + Switch ON: copia ultima riga
+      schema.forEach(({ key, format }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field && lastRowData[key] !== null && lastRowData[key] !== undefined && key !== 'id') {
+          let displayValue = String(lastRowData[key]);
+          if (format === 'date') {
+            displayValue = new Date(lastRowData[key] as Date).toISOString().split('T')[0];
+          }
           field.value = displayValue;
         
         }
       });
     }
-  }, [isOpen, initialData, schema, isEditMode]);
+  }, [isOpen, initialData, isEditMode, copyLastRow, lastRowData, schema]);
+
+  const handleCopyLastRowToggle = useCallback(() => {
+    const newValue = !copyLastRow;
+    setCopyLastRow(newValue);
+    
+    // ✅ SE DISATTIVI → PULISCI TUTTI I CAMPI
+    if (!newValue && formRef.current) {
+      schema.forEach(({ key }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field) {
+          field.value = '';
+        }
+      });
+      // Reset dropdown states
+      setDropdownStates({});
+    }
+  }, [copyLastRow, schema]);
   
   // ✅ FETCH DISTINCT quando modal apre
   const fetchOptionsForColumn = useCallback(async (columnKey: string) => {
@@ -152,6 +188,20 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
         <h4 className="mb-4 sm:mb-6 text-lg font-medium text-gray-800 dark:text-white/90">
           {title}
         </h4>
+
+        {/* ✅ SWITCH "COPIA ULTIMA RIGA" - SOLO ADD MODE */}
+        {!isEditMode && lastRowData && (
+          <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/30 dark:border-blue-800">
+            <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Fill with last row data
+            </Label>
+            <Switch
+              defaultChecked={copyLastRow}
+              onChange={handleCopyLastRowToggle}
+              color="blue"
+            />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-3 sm:gap-x-4 sm:gap-y-5 md:grid-cols-2">
           {schema.map(({ key, label, format, required }) => (

@@ -29,6 +29,7 @@ interface GenericTableProps<T extends TableRowData> {
   serverSortKey: string;
   serverSortDirection: SortDir;
   schema?: TableColumnConfig[];
+  lastRowData?: T; // Per copia ultimo record
 }
 
 // 🚀 FUNZIONE FORMAT GENERICA
@@ -84,6 +85,15 @@ export default function GenericTable<T extends TableRowData>({
 
   // 🚀 SCHEMA DA SUPABASE (se non fornito via props)
   const schema = useMemo(() => propSchema || [], [propSchema]); // Integrazione con get_table_schema
+
+  console.log('🔍 DEBUG SCHEMA:', {
+    propSchema: propSchema,
+    schema: schema,
+    schemaKeys: schema.map(s => s.key),
+    hasId: schema.some(s => s.key === 'id'),
+    tableDataLength: tableData.length,
+    firstRowKeys: tableData[0] ? Object.keys(tableData[0]) : 'no data'
+  });
 
   const handleModalConfirm = useCallback(async (formData: FormData) => {
     try {
@@ -279,6 +289,7 @@ export default function GenericTable<T extends TableRowData>({
         initialData={editRowData || undefined}
         isEditMode={!!editRowData}
         title={editRowData ? `Modifica Record` : `Nuovo Record`}
+        lastRowData={tableData[0]}
       />
     </div>
   );

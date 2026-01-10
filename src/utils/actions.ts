@@ -36,8 +36,8 @@ export async function updateRecord(
     const { data: existingRecord, error: fetchError } = await supabase
       .from(tableName)
       .select('id')
-      .eq('id', recordId)
-      .single();
+      .eq('id', recordId.trim())
+      .select('id');
 
     if (fetchError || !existingRecord) {
       console.error('❌ Record non trovato:', { tableName, recordId, fetchError });
@@ -68,9 +68,8 @@ export async function updateRecord(
     const { data: updated, error: updateError } = await supabase
       .from(tableName)
       .update(castedData)
-      .eq('id', recordId)
-      .select()
-      .single();
+      .eq('id', recordId.trim())
+      .select('id');
 
     if (updateError) {
       console.error('❌ Update Error:', {
@@ -91,7 +90,7 @@ export async function updateRecord(
 
     return {
       success: true,
-      id: updated?.id as string
+      id: recordId
     };
 
   } catch (error) {

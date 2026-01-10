@@ -39,7 +39,7 @@ export default async function GenericTablePage({
   return (
     <div>
       <div className="space-y-6">
-        <ComponentCard title={`Table`}>
+        <ComponentCard title={tableName + ` Table`}>
           <GenericTable<any>  // ✅ any = funziona con tutto
             tableData={tableData}
             tableName={tableName}
@@ -60,7 +60,7 @@ export default async function GenericTablePage({
 }
 
 // 🚀 DYNAMIC METADATA
-export async function generateMetadata({ params }: { params: { table: string } }) {
+export async function generateMetadata() {
   return {
     title: `Manage Table | TailAdmin`,
     description: `Manage data`,

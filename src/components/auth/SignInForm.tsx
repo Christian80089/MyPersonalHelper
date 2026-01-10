@@ -3,24 +3,24 @@ import Checkbox from "@/components/form/input/Checkbox";
 import Input from "@/components/form/input/InputField";
 import Label from "@/components/form/Label";
 import Button from "@/components/ui/button/Button";
-import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
+import { EyeCloseIcon, EyeIcon } from "@/icons";
+import { loginWithEmail } from "@/utils/auth";
 import Link from "next/link";
-import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
 
 export default function SignInForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [isChecked, setIsChecked] = useState(false)
+  const [isPending, startTransition] = useTransition()
+  
+  const searchParams = useSearchParams()
+  const error = searchParams.get("message")
+  
   return (
     <div className="flex flex-col flex-1 lg:w-1/2 w-full">
-      <div className="w-full max-w-md sm:pt-10 mx-auto mb-5">
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <ChevronLeftIcon />
-          Back to dashboard
-        </Link>
-      </div>
       <div className="flex flex-col justify-center flex-1 w-full max-w-md mx-auto">
         <div>
           <div className="mb-5 sm:mb-8">
@@ -84,13 +84,25 @@ export default function SignInForm() {
                 </span>
               </div>
             </div>
-            <form>
+            {/* ✅ ERROR MESSAGE */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                {decodeURIComponent(error || "")}
+              </div>
+            )}
+            <form
+              action={async (formData: FormData) => {
+                startTransition(async () => {
+                  await loginWithEmail(formData)
+                })
+              }}
+            >
               <div className="space-y-6">
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
                   </Label>
-                  <Input placeholder="info@gmail.com" type="email" />
+                  <Input placeholder="info@gmail.com" type="email" onChange={(e) => setEmail(e.target.value)} name="email" />
                 </div>
                 <div>
                   <Label>
@@ -98,8 +110,10 @@ export default function SignInForm() {
                   </Label>
                   <div className="relative">
                     <Input
+                      name="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
+                      onChange={(e) => setPassword(e.target.value)}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -128,8 +142,20 @@ export default function SignInForm() {
                   </Link>
                 </div>
                 <div>
-                  <Button className="w-full" size="sm">
-                    Sign in
+                  <Button 
+                    className="w-full" 
+                    size="sm"
+                    disabled={isPending}
+                    onClick={async () => {
+                      const formData = new FormData()
+                      formData.append('email', email)
+                      formData.append('password', password)
+                      startTransition(async () => {
+                        await loginWithEmail(formData)
+                      })
+                    }}
+                  >
+                    {isPending ? "Signing In..." : "Sign In"}
                   </Button>
                 </div>
               </div>

@@ -62,7 +62,7 @@ export default async function GenericTablePage({
 // 🚀 DYNAMIC METADATA
 export async function generateMetadata({ params }: { params: { table: string } }) {
   return {
-    title: `${params.table} Table | TailAdmin`,
+    title: `Manage Table | TailAdmin`,
     description: `Manage data`,
   };
 }

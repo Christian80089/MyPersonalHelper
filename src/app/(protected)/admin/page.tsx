@@ -1,12 +1,10 @@
-import type { Metadata } from "next";
-import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
-import { createClient } from "@/lib/supabase/server"
-import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
-import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
-import StatisticsChart from "@/components/ecommerce/StatisticsChart";
-import RecentOrders from "@/components/ecommerce/RecentOrders";
 import DemographicCard from "@/components/ecommerce/DemographicCard";
-import { redirect } from "next/navigation";
+import { EcommerceMetrics } from "@/components/ecommerce/EcommerceMetrics";
+import MonthlySalesChart from "@/components/ecommerce/MonthlySalesChart";
+import MonthlyTarget from "@/components/ecommerce/MonthlyTarget";
+import RecentOrders from "@/components/ecommerce/RecentOrders";
+import StatisticsChart from "@/components/ecommerce/StatisticsChart";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title:
@@ -15,12 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default async function Ecommerce() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getClaims();
-
-  if (error || !data?.claims) {
-    redirect('/signin'); // O la tua route login
-  }
   
   return (
     <div className="grid grid-cols-12 gap-4 md:gap-6">

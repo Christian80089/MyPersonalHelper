@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import Label from "../form/Label";
@@ -30,31 +30,35 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   // ✅ NUOVI STATI
   const [dropdownStates, setDropdownStates] = useState<{[key: string]: boolean}>({});
   const [distinctOptions, setDistinctOptions] = useState<{[key: string]: string[]}>({});
-  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [loadingOptions, setLoadingOptions] = useState<{[key: string]: boolean}>({});
 
   // ✅ FETCH DISTINCT quando modal apre
-  React.useEffect(() => {
-    if (isOpen && tableName) {
-      const textColumns = schema
-        .filter((col): col is TableColumnConfig & { format: 'text' } => col.format === 'text')
-        .map(col => col.key);
-      
-      if (textColumns.length > 0) {
-        setLoadingOptions(true);
-        fetchDistinctOptions(tableName, textColumns)
-          .then(({ success, options }) => {
-            if (success) {
-              setDistinctOptions(options);
-            }
-          })
-          .finally(() => setLoadingOptions(false));
-      }
-    }
-  }, [isOpen, tableName, schema]);
+  const fetchOptionsForColumn = useCallback(async (columnKey: string) => {
+    if (!tableName || !isOpen) return;
 
-  const toggleDropdown = (key: string) => {
-    setDropdownStates(prev => ({ ...prev, [key]: !prev[key] }));
-  };
+    setLoadingOptions(prev => ({ ...prev, [columnKey]: true }));
+    
+    try {
+      const result = await fetchDistinctOptions(tableName, [columnKey]);
+      if (result.success) {
+        setDistinctOptions(prev => ({ ...prev, [columnKey]: result.options[columnKey] || [] }));
+      }
+    } catch (error) {
+      console.error(`Errore fetch options per ${columnKey}:`, error);
+    } finally {
+      setLoadingOptions(prev => ({ ...prev, [columnKey]: false }));
+    }
+  }, [tableName, isOpen]);
+
+  const toggleDropdown = useCallback((key: string) => {
+    const newState = !dropdownStates[key];
+    setDropdownStates(prev => ({ ...prev, [key]: newState }));
+    
+    // ✅ Fetch solo se switch attivato e non già caricato
+    if (newState && !distinctOptions[key] && !loadingOptions[key]) {
+      fetchOptionsForColumn(key);
+    }
+  }, [dropdownStates, distinctOptions, loadingOptions, fetchOptionsForColumn]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -163,13 +167,14 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
                   className="w-full p-2.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
                   defaultValue=""
                 >
-                  <option value="">Seleziona {label}...</option>
+                  <option value="">
+                    {loadingOptions[key] ? 'Caricamento...' : `Seleziona ${label}...`}
+                  </option>
                   {(distinctOptions[key]?.length ? distinctOptions[key] : []).map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
-                  {loadingOptions && <option disabled>Caricamento...</option>}
                 </select>
               ) : (
                 /* INPUT NORMALE */

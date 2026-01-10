@@ -220,13 +220,17 @@ export async function fetchTableDataGeneric(
 ) {
   const supabase = await createClient();
   const from = (page - 1) * limit;
+  const traceId = `trace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   
+  console.log(`🔍 Supabase CALL START [${traceId}] table=${tableName} page=${page}`);
   const { data, error, count } = await supabase
     .from(tableName)
     .select("*", { count: 'estimated' })
     .order(sortBy, { ascending: sortDir === 'asc' })
     .range(from, from + limit - 1);
 
+    console.log(`🔍 Supabase CALL END [${traceId}] count=${count} rows=${data?.length}`);
+    
   if (error) throw error;
 
   const totalPages = Math.ceil((count || 0) / limit);

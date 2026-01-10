@@ -24,12 +24,12 @@ export default async function GenericTablePage({
   const resolvedSearchParams = await searchParams;
   
   const page = Math.max(1, parseInt(resolvedSearchParams.page || '1'));
-  const sortBy = resolvedSearchParams.sortBy || 'data_busta_paga' || 'created_at';
+  const sortBy = resolvedSearchParams.sortBy || 'created_at';
   const sortDir = (resolvedSearchParams.sortDir as 'asc' | 'desc' | undefined) || 'desc';
 
   // 🚀 FETCH + SCHEMA AUTO
   const { data: tableData, totalPages, currentPage } = await fetchTableDataGeneric(
-    tableName, page, 8, sortBy, sortDir
+    tableName, page, 10, sortBy, sortDir
   );
   
   const schema: TableColumnConfig[] = await get_table_schema(tableName);  // any per genericità
@@ -39,7 +39,7 @@ export default async function GenericTablePage({
   return (
     <div>
       <div className="space-y-6">
-        <ComponentCard title={`Table`}>
+        <ComponentCard title={tableName + ` Table`}>
           <GenericTable<any>  // ✅ any = funziona con tutto
             tableData={tableData}
             tableName={tableName}
@@ -60,7 +60,7 @@ export default async function GenericTablePage({
 }
 
 // 🚀 DYNAMIC METADATA
-export async function generateMetadata({ params }: { params: { table: string } }) {
+export async function generateMetadata() {
   return {
     title: `Manage Table | TailAdmin`,
     description: `Manage data`,

@@ -23,6 +23,7 @@ interface TableRowProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void; // ← AGGIUNTO
+  onDoubleClick?: () => void; // ← AGGIUNTO
   role?: string;        // ← AGGIUNTO (accessibilità)
   tabIndex?: number;    // ← AGGIUNTO (navigazione tastiera)
   onKeyDown?: React.KeyboardEventHandler<HTMLTableRowElement>; // ← AGGIUNTO
@@ -60,6 +61,7 @@ const TableRow: React.FC<TableRowProps> = ({
   children, 
   className,
   onClick,
+  onDoubleClick,
   role,
   tabIndex,
   onKeyDown,
@@ -68,6 +70,7 @@ const TableRow: React.FC<TableRowProps> = ({
     <tr 
       className={className}
       onClick={onClick}
+      onDoubleClick={onDoubleClick}
       role={role}
       tabIndex={tabIndex}
       onKeyDown={onKeyDown}

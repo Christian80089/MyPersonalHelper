@@ -1,10 +1,10 @@
 "use client";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../ui/button/Button";
 import { Modal } from "../ui/modal";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
-import { TableColumnConfig, castFormValue } from '@/types/table';
+import { TableColumnConfig, TableRowData, castFormValue } from '@/types/table';
 import { fetchDistinctOptions } from "@/utils/actions";
 import Switch from "../form/switch/Switch";
 import DatePicker from "../form/date-picker";
@@ -16,6 +16,8 @@ interface AddModalFormProps {
   schema: TableColumnConfig[];
   title?: string;
   tableName?: string;
+  initialData?: TableRowData;
+  isEditMode?: boolean;
 }
 
 export const AddModalForm: React.FC<AddModalFormProps> = ({
@@ -25,6 +27,8 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   schema,
   title = "Nuovo Record",
   tableName,
+  initialData,
+  isEditMode = false,
 }) => {
   const formRef = useRef<HTMLFormElement>(null);
   // ✅ NUOVI STATI
@@ -32,6 +36,28 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   const [distinctOptions, setDistinctOptions] = useState<{[key: string]: string[]}>({});
   const [loadingOptions, setLoadingOptions] = useState<{[key: string]: boolean}>({});
 
+  useEffect(() => {
+    if (isOpen && initialData && formRef.current && isEditMode) {
+      schema.forEach(({ key, format }) => {
+        const field = formRef.current?.querySelector(`[name="${key}"]`) as HTMLInputElement | HTMLSelectElement;
+        if (field && initialData[key] !== null && initialData[key] !== undefined) {
+          
+          // ✅ FORMATTA valore per il campo
+          let displayValue = String(initialData[key]);
+          
+          if (format === 'date') {
+            displayValue = new Date(initialData[key] as Date).toISOString().split('T')[0];
+          } else if (format === 'currency' || format === 'number') {
+            displayValue = String(initialData[key]);
+          }
+          
+          field.value = displayValue;
+        
+        }
+      });
+    }
+  }, [isOpen, initialData, schema, isEditMode]);
+  
   // ✅ FETCH DISTINCT quando modal apre
   const fetchOptionsForColumn = useCallback(async (columnKey: string) => {
     if (!tableName || !isOpen) return;
@@ -204,7 +230,7 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
             onClick={handleSubmit}
             className="w-full sm:w-auto flex-1 sm:flex-none min-w-[120px] sm:min-w-[110px]"
           >
-            Aggiungi Record
+             {isEditMode ? 'Aggiorna Record' : 'Aggiungi Record'}
           </Button>
         </div>
       </form>

@@ -143,30 +143,57 @@ export async function fetchDistinctOptions(
     const supabase = await createClient();
     const options: Record<string, string[]> = {};
 
-    // 🚀 Fetch parallelo per performance
+    // 🚀 Query OTTIMIZZATA: usa rpc per performance estreme
     const promises = columns.map(async (column) => {
+      // ✅ QUERY SUPABASE OTTIMIZZATA per grandi tabelle
       const { data, error } = await supabase
-        .from(tableName)
-        .select(column)
-        .not(column, 'is', null)
-        .not(column, 'eq', '');
+        .rpc('get_distinct_top_values', {
+          p_table_name: tableName,
+          p_column_name: column,
+          p_limit: 20
+        });
 
+        console.log('📥 RPC Response RAW:', data);
       if (error) {
-        console.warn(`⚠️ Distinct failed for ${column}:`, error.message);
+        console.warn(`⚠️ Distinct RPC failed for ${column}, fallback query:`, error.message);
+        
+        // ✅ FALLBACK con LIMIT e DISTINCT nativo
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from(tableName)
+          .select(`${column}`)
+          .not(column, 'is', null)
+          .not(column, 'eq', '')
+          .limit(10000) // Max per evitare timeout su tabelle enormi
+          .order(column);
+
+        if (fallbackError) {
+          console.warn(`⚠️ Fallback failed for ${column}`);
+          return;
+        }
+
+        // ✅ Distinct con limite 20 dal fallback
+        const distinctValues = Array.from(
+          new Set(fallbackData?.map((row: any) => row[column]).filter(Boolean) ?? [])
+        )
+          .sort()
+          .slice(0, 20);
+
+        options[column] = distinctValues;
         return;
       }
 
-      // ✅ Distinct + filtro vuoti
-      const distinctValues = Array.from(
-        new Set(data?.map((row: any) => row[column]).filter(Boolean) ?? [])
-      ).sort();
+      // ✅ Filtra null/empty e limita a 20
+      const distinctValues = (data || [])
+        .map((row: any) => row.value)
+        .filter(Boolean)
+        .slice(0, 20);
 
       options[column] = distinctValues;
     });
 
     await Promise.all(promises);
 
-    console.log('✅ Distinct Options:', { tableName, options });
+    console.log('✅ Distinct Options Optimized:', { tableName, count: Object.values(options).reduce((sum, vals) => sum + vals.length, 0) });
 
     return {
       success: true,

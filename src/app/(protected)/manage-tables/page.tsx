@@ -24,12 +24,12 @@ export default async function GenericTablePage({
   const resolvedSearchParams = await searchParams;
   
   const page = Math.max(1, parseInt(resolvedSearchParams.page || '1'));
-  const sortBy = resolvedSearchParams.sortBy || 'data_busta_paga' || 'created_at';
+  const sortBy = resolvedSearchParams.sortBy || 'created_at';
   const sortDir = (resolvedSearchParams.sortDir as 'asc' | 'desc' | undefined) || 'desc';
 
   // 🚀 FETCH + SCHEMA AUTO
   const { data: tableData, totalPages, currentPage } = await fetchTableDataGeneric(
-    tableName, page, 8, sortBy, sortDir
+    tableName, page, 10, sortBy, sortDir
   );
   
   const schema: TableColumnConfig[] = await get_table_schema(tableName);  // any per genericità

@@ -58,7 +58,7 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
     const viewportW = window.innerWidth || 1024;
     const modalW = Math.min(maxW, Math.max(320, viewportW - 32));
     const x = Math.max(16, Math.round((viewportW - modalW) / 2));
-    const y = Math.max(24, Math.round((window.innerHeight || 800) * 0.08));
+    const y = Math.max(24, Math.round((window.innerHeight || 800) * 0.10));
     setDefaultPos({ x, y });
   }, [isOpen]);
 
@@ -78,6 +78,7 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setDropdownStates({});
+      setCopyLastRow(false);
     }
   }, [isOpen]);
 
@@ -253,13 +254,14 @@ export const AddModalForm: React.FC<AddModalFormProps> = ({
           cancel='input,textarea,select,button,[data-nodrag="true"]'
           bounds="parent"
           defaultPosition={defaultPos}
+          axis="x"
         >
           <div
             ref={dragNodeRef}
             className="
               box-border
               w-[min(584px,calc(100vw-2rem))]
-              max-h-[90vh]
+              max-h-[85vh]
               overflow-y-auto overflow-x-hidden
               rounded-lg border border-gray-200 dark:border-gray-700
               bg-white/85 dark:bg-gray-900/75 backdrop-blur

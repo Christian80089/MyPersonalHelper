@@ -2,11 +2,9 @@
 import ComponentCard from "@/components/common/ComponentCard";
 import GenericTable from "@/components/tables/GenericTable";
 import TableSwitcher from "@/components/tables/TableSwitcher";
-import Button from "@/components/ui/button/Button";
 import { TableColumnConfig } from "@/types/table";
 import { fetchPublicTables, fetchTableDataGeneric } from '@/utils/actions';
 import get_table_schema from "@/utils/db";
-import { ChevronDown } from "lucide-react";
 
 
 // 🚀 GENERIC PAGE PROPS

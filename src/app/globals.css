@@ -794,3 +794,10 @@ input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+@keyframes overflowTooltipIn {
+  to {
+    opacity: 1;
+    transform: translate(-50%, -8px);
+  }
+}

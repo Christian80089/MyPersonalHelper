@@ -5,6 +5,49 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { TableColumnConfig, castFormValue } from '@/types/table';
 
+interface FetchPublicTablesResult {
+  success: boolean;
+  tables: string[];
+  error?: string;
+}
+
+type PublicTablesRpcRow =
+  | string
+  | { table_name?: string; tablename?: string; name?: string };
+
+export async function fetchPublicTables(): Promise<FetchPublicTablesResult> {
+  try {
+    const supabase = await createClient();
+
+    // Chiama la funzione Postgres esistente
+    const { data, error } = await supabase.rpc("get_public_tables");
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const rows = (data ?? []) as PublicTablesRpcRow[];
+
+    // Normalizzazione: supporta più shape possibili (string o object)
+    const tables = rows
+      .map((row) => {
+        if (typeof row === "string") return row;
+        return row.table_name ?? row.tablename ?? row.name ?? "";
+      })
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+
+    return { success: true, tables };
+  } catch (e) {
+    return {
+      success: false,
+      tables: [],
+      error: e instanceof Error ? e.message : "Errore sconosciuto",
+    };
+  }
+}
+
 interface UpdateResult {
   success: boolean;
   id: string;

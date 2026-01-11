@@ -19,6 +19,7 @@ import Pagination from "./Pagination";
 import Button from "../ui/button/Button";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
+import { OverflowTooltip } from "../modals/OverflowTooltip";
 
 // 🚀 PROPS GENERICHE TYPE-SAFE
 type SortDir = 'asc' | 'desc';
@@ -310,7 +311,11 @@ export default function GenericTable<T extends TableRowData>({
                       key={String(column.key)}
                       className="px-5 py-3 font-medium text-gray-500 text-start text-theme-xs dark:text-gray-400"
                     >
-                      {formatCellValue(row, column.key, column.format)}
+                      <OverflowTooltip
+                        text={formatCellValue(row, column.key, column.format)}
+                        className="text-theme-sm text-gray-700 dark:text-gray-300"
+                        maxWidthClassName="max-w-[260px]"
+                      />
                     </TableCell>
                   ))}
                 </TableRow>

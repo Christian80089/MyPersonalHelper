@@ -2,7 +2,23 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
+const PUBLIC_FILE = /\.(.*)$/;
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ✅ non proteggere file statici + manifest
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.json" ||
+    pathname === "/manifest.webmanifest" ||
+    PUBLIC_FILE.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

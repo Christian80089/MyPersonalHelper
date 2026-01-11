@@ -43,10 +43,20 @@ export async function updateSession(request: NextRequest) {
   // ✅ FIX: getSession() invece di getClaims()
   const { data: { session } } = await supabase.auth.getSession()
   
-  // ✅ PROTEZIONE CORRETTA
-  if (!session && !request.nextUrl.pathname.startsWith('/signin')) {
-    const loginUrl = new URL('/signin', request.url)
-    return NextResponse.redirect(loginUrl)
+  // ✅ HOME: sempre redirect
+  if (pathname === "/") {
+    const target = session ? "/admin" : "/signin"
+    return NextResponse.redirect(new URL(target, request.url))
+  }
+
+  // ✅ Se già loggato e sei su /signin, mandalo in /admin
+  if (session && pathname.startsWith("/signin")) {
+    return NextResponse.redirect(new URL("/admin", request.url))
+  }
+
+  // ✅ Proteggi tutto il resto (tranne /signin)
+  if (!session && !pathname.startsWith("/signin")) {
+    return NextResponse.redirect(new URL("/signin", request.url))
   }
 
   return supabaseResponse

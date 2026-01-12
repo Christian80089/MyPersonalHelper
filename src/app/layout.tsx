@@ -4,6 +4,8 @@ import "flatpickr/dist/flatpickr.css";
 import { SidebarProvider } from '@/context/SidebarContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import type { Metadata } from "next";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json"

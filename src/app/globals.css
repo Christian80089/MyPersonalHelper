@@ -801,3 +801,27 @@ input[type="number"]::-webkit-inner-spin-button {
     transform: translate(-50%, -8px);
   }
 }
+
+/* React Grid Layout - placeholder (drop area) */
+.react-grid-placeholder {
+  background: rgba(70, 95, 255, 0.12) !important; /* brand-500 @ ~12% */
+  border: 1px dashed rgba(70, 95, 255, 0.35) !important;
+  border-radius: 16px !important; /* ~rounded-2xl */
+  box-shadow: 0px 0px 0px 4px rgba(70, 95, 255, 0.08) !important;
+  transition: background-color 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.dark .react-grid-placeholder {
+  background: rgba(70, 95, 255, 0.18) !important;
+  border-color: rgba(70, 95, 255, 0.45) !important;
+  box-shadow: 0px 0px 0px 4px rgba(70, 95, 255, 0.12) !important;
+}
+
+.react-grid-item.react-draggable-dragging {
+  opacity: 0.9;
+  transform: rotate(0.15deg);
+}
+
+.react-grid-item.react-resizable-resizing {
+  opacity: 0.95;
+}

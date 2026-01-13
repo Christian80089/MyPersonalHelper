@@ -40,14 +40,14 @@ export function PieChartWidget() {
                 show: true,
                 fontFamily: "Outfit, sans-serif",
                 fontSize: "12px",
-                offsetY: 10,
+                offsetY: -2,
               },
               value: {
                 show: true,
                 fontFamily: "Outfit, sans-serif",
                 fontSize: "20px",
                 fontWeight: 700,
-                offsetY: -6,
+                offsetY: 2,
                 formatter: (val) => {
                   const n = typeof val === "string" ? Number(val) : val;
                   return Number.isFinite(n) ? n.toLocaleString() : String(val);

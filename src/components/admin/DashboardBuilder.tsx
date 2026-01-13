@@ -37,14 +37,14 @@ const WIDGET_CATALOG: WidgetDef[] = [
   {
     type: "kpiCard",
     label: "Card",
-    defaultSize: { w: 4, h: 6 },
+    defaultSize: { w: 6, h: 6 },
     render: () => (
       <KpiCardWidget title="Revenue" value="€12.4k" subtitle="Last 30 days" />
     ),
   },
-  { type: "barChart", label: "Bar Chart", defaultSize: { w: 6, h: 8 }, render: () => <BarChartWidget /> },
-  { type: "lineChart", label: "Line Chart", defaultSize: { w: 12, h: 10 }, render: () => <LineChartWidget /> },
-  { type: "pieChart", label: "Pie Chart", defaultSize: { w: 4, h: 8 }, render: () => <PieChartWidget /> },
+  { type: "barChart", label: "Bar Chart", defaultSize: { w: 12, h: 6 }, render: () => <BarChartWidget /> },
+  { type: "lineChart", label: "Line Chart", defaultSize: { w: 12, h: 9 }, render: () => <LineChartWidget /> },
+  { type: "pieChart", label: "Pie Chart", defaultSize: { w: 6, h: 8 }, render: () => <PieChartWidget /> },
 ];
 
 type BP = "lg" | "md" | "sm" | "xs" | "xxs";
@@ -124,22 +124,25 @@ export default function DashboardBuilder(props: {
   });
 
   const addWidget = useCallback((type: WidgetType) => {
-  const meta = WIDGET_CATALOG.find((x) => x.type === type);
-  if (!meta) return;
+    const meta = WIDGET_CATALOG.find((x) => x.type === type);
+    if (!meta) return;
 
-  const id = `w_${type}_${crypto.randomUUID()}`;
-  setWidgets((prev) => [...prev, { id, type }]);
+    const id = `w_${type}_${crypto.randomUUID()}`;
+    setWidgets((prev) => [...prev, { id, type }]);
 
-  // 1) Leggi lo stato corrente da `layouts` (quello del hook)
-  const current = ensureAllBreakpoints(layouts as Partial<Record<BP, Layout>>);
+    const current = ensureAllBreakpoints(layouts as Partial<Record<BP, Layout>>);
 
-  // 2) Calcola il nuovo lg
-  const lg = [...current.lg];
-  lg.push({ i: id, x: 0, y: Infinity, w: meta.defaultSize.w, h: meta.defaultSize.h });
+    // clona TUTTO senza toccare le posizioni esistenti
+    const next = { ...current };
 
-  // 3) Setta direttamente (NO callback)
-  setLayouts(deriveFromLg(lg));
-}, [layouts, setLayouts]);
+    // aggiungi SOLO al breakpoint corrente
+    next[breakpoint] = [
+      ...next[breakpoint],
+      { i: id, x: 0, y: Infinity, w: meta.defaultSize.w, h: meta.defaultSize.h },
+    ];
+
+    setLayouts(next);
+  }, [layouts, setLayouts, breakpoint]);
 
   const removeWidget = useCallback((id: string) => {
   setWidgets((prev) => prev.filter((w) => w.id !== id));
@@ -162,7 +165,7 @@ export default function DashboardBuilder(props: {
       return (
         <div
           key={w.id}
-          className="group relative h-full overflow-hidden rounded-2xl border border-gray-200/70 bg-white shadow-theme-xs ring-1 ring-transparent transition hover:-translate-y-0.5 hover:shadow-theme-sm hover:ring-gray-200 dark:border-gray-800/80 dark:bg-gray-dark dark:hover:ring-gray-700"
+          className="group relative h-full rounded-2xl border border-gray-200/70 bg-white shadow-theme-xs ring-1 ring-transparent transition hover:-translate-y-0.5 hover:shadow-theme-sm hover:ring-gray-200 dark:border-gray-800/80 dark:bg-gray-dark dark:hover:ring-gray-700"
         >
           <div className="flex items-center justify-between gap-3 border-b border-gray-100/80 px-4 py-3 dark:border-gray-800/70">
             <div
@@ -185,7 +188,7 @@ export default function DashboardBuilder(props: {
             )}
           </div>
 
-          <div className="h-[calc(100%-52px)] min-w-0 overflow-hidden p-4">
+          <div className="h-[calc(100%-52px)] min-w-0 overflow-hidden py-4">
             {def ? def.render(w) : null}
           </div>
         </div>
@@ -194,13 +197,13 @@ export default function DashboardBuilder(props: {
   }, [widgets, editable, removeWidget]);
 
   return (
-    <div ref={containerRef} className="space-y-4">
+    <div ref={containerRef} className="space-y-4 rounded-2xl bg-gray-50 p-4 dark:bg-gray-900/20">
       {editable && (
         <div className="flex flex-wrap items-center gap-2">
           {WIDGET_CATALOG.map((w) => (
             <button
               key={w.type}
-              className="inline-flex items-center gap-2 rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition active:scale-[0.98] hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
               onClick={() => addWidget(w.type)}
             >
               Add {w.label}
@@ -208,7 +211,7 @@ export default function DashboardBuilder(props: {
           ))}
 
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition active:scale-[0.98] hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
             onClick={() => {
               localStorage.setItem("ecom_layouts", JSON.stringify(layouts));
               localStorage.setItem("ecom_widgets", JSON.stringify(widgets));
@@ -218,7 +221,7 @@ export default function DashboardBuilder(props: {
           </button>
 
           <button
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
+            className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition active:scale-[0.98] hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
             onClick={clearDashboard}
           >
             Clear dashboard

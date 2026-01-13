@@ -14,7 +14,8 @@ export function BarChartWidget() {
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
-      height: 180,
+      height: "100%",
+      width: "100%", // important
       toolbar: {
         show: false,
       },
@@ -22,7 +23,7 @@ export function BarChartWidget() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "39%",
+        columnWidth: "50%",
         borderRadius: 5,
         borderRadiusApplication: "end",
       },
@@ -80,9 +81,10 @@ export function BarChartWidget() {
     },
 
     tooltip: {
-      x: {
-        show: false,
-      },
+      enabled: true,
+      followCursor: true,
+      intersect: false,
+      x: { show: false },
       y: {
         formatter: (val: number) => `${val}`,
       },
@@ -95,8 +97,8 @@ export function BarChartWidget() {
     },
   ];
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartOne" className="min-w-[1000px]">
+    <div className="max-w-full overflow-x-auto no-scrollbar">
+      <div id="chartOne">
         <ReactApexChart
           options={options}
           series={series}

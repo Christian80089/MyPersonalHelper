@@ -18,11 +18,13 @@ export function LineChartWidget() {
     colors: ["#465FFF", "#9CB9FF"], // Define line colors
     chart: {
       fontFamily: "Outfit, sans-serif",
-      height: 310,
+      height: "100%",
+      width: "100%",
       type: "line", // Set the chart type to 'line'
       toolbar: {
         show: false, // Hide chart toolbar
       },
+      zoom: { enabled: false }
     },
     stroke: {
       curve: "straight", // Define the line style (straight, smooth, or step)
@@ -57,8 +59,16 @@ export function LineChartWidget() {
       },
     },
     dataLabels: {
-      enabled: false, // Disable data labels
+      enabled: true, // Disable data labels
     },
+    responsive: [
+      {
+        breakpoint: 768, // <= 768px (di fatto: mobile/sotto md)
+        options: {
+          dataLabels: { enabled: false },
+        },
+      },
+    ],
     tooltip: {
       enabled: true, // Enable tooltip
       x: {
@@ -118,8 +128,8 @@ export function LineChartWidget() {
     },
   ];
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartEight" className="min-w-[1000px]">
+    <div className="max-w-full overflow-x-auto no-scrollbar">
+      <div id="chartEight" >
         <ReactApexChart
           options={options}
           series={series}

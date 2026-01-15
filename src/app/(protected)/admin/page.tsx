@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default async function Ecommerce() {
   
   return (
-    <div className="p-4 md:p-6">
+    <div className="-mx-4 md:-mx-6 lg:-mx-8 overflow-x-hidden">
       <DashboardBuilder editable />
     </div>
   );

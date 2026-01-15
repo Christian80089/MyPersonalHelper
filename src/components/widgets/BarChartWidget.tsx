@@ -1,15 +1,56 @@
 "use client";
 
 import { ApexOptions } from "apexcharts";
-
 import dynamic from "next/dynamic";
-// Dynamically import the ReactApexChart component
-const ReactApexChart = dynamic(() => import("react-apexcharts"), {
-  ssr: false,
-});
+import { useAggregateSumByDate } from "@/hooks/useAggregateSumByDate";
 
-export function BarChartWidget() {
-  const options: ApexOptions = {
+const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
+
+interface BarChartProps {
+  table_name: string;
+  date_column: string;
+  sum_column: string;
+  granularity?: 'monthly' | 'quarterly' | 'yearly';
+  start_date: string;
+  end_date: string;
+  options?: ApexOptions;
+}
+
+export function BarChartWidget({
+  table_name,
+  date_column,
+  sum_column,
+  granularity = 'monthly',
+  start_date,
+  end_date,
+  options: externalOptions,
+}: BarChartProps) {
+  const { data: aggregateData, isLoading } = useAggregateSumByDate({
+    table_name,
+    date_column,
+    sum_column,
+    granularity,
+    start_date,
+    end_date,
+  });
+
+  const chartSeries = aggregateData ? [{
+    name: "Sales",
+    data: aggregateData.map(row => row.total_sum),
+  }] : undefined;
+
+  const chartCategories = aggregateData ? aggregateData.map(row => row.period) : undefined;
+
+  const formatNumber = (value: number): string => {
+    if (value >= 1000000) {
+      return (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+      return (value / 1000).toFixed(1) + 'k';
+    }
+    return value.toFixed(0);
+  };
+
+  const defaultOptions: ApexOptions = {
     colors: ["#465fff"],
     chart: {
       fontFamily: "Outfit, sans-serif",
@@ -22,7 +63,7 @@ export function BarChartWidget() {
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: "39%",
+        columnWidth: "50%",
         borderRadius: 5,
         borderRadiusApplication: "end",
       },
@@ -67,6 +108,11 @@ export function BarChartWidget() {
       title: {
         text: undefined,
       },
+      labels: {
+        formatter: function (value: number) {
+          return formatNumber(value);
+        },
+      },
     },
     grid: {
       yaxis: {
@@ -78,28 +124,40 @@ export function BarChartWidget() {
     fill: {
       opacity: 1,
     },
-
     tooltip: {
-      x: {
-        show: false,
-      },
+      enabled: true,
+      followCursor: true,
+      intersect: false,
+      x: { show: false },
       y: {
-        formatter: (val: number) => `${val}`,
+        formatter: (val: number) => formatNumber(val),
       },
     },
+    ...(chartCategories && { 
+      xaxis: {
+        categories: chartCategories,
+        axisBorder: {
+          show: false,
+        },
+        axisTicks: {
+          show: false,
+        },
+      } 
+    }),
   };
-  const series = [
-    {
-      name: "Sales",
-      data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
-    },
-  ];
+
+  const finalOptions: ApexOptions = { ...defaultOptions, ...externalOptions };
+
+  if (isLoading) {
+    return <div className="h-[180px] flex items-center justify-center">Loading chart...</div>;
+  }
+
   return (
-    <div className="max-w-full overflow-x-auto custom-scrollbar">
-      <div id="chartOne" className="min-w-[1000px]">
+    <div className="max-w-full overflow-x-auto no-scrollbar">
+      <div id="chartOne">
         <ReactApexChart
-          options={options}
-          series={series}
+          options={finalOptions}
+          series={chartSeries || []}
           type="bar"
           height={180}
         />

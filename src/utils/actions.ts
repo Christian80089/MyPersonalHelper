@@ -1,25 +1,66 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // app/actions.ts
 'use server';
+
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { TableColumnConfig, castFormValue } from '@/types/table';
 
+/**
+ * =====================================================================
+ * INTERFACCE E TIPI
+ * =====================================================================
+ */
+
+/** Risultato fetch tabelle pubbliche */
 interface FetchPublicTablesResult {
   success: boolean;
   tables: string[];
   error?: string;
 }
 
+/** Riga RPC per tabelle pubbliche (supporta vari formati) */
 type PublicTablesRpcRow =
   | string
   | { table_name?: string; tablename?: string; name?: string };
 
+/** Risultato operazione update record */
+interface UpdateResult {
+  success: boolean;
+  id: string;
+  error?: string;
+}
+
+/** Risultato operazione delete record */
+interface DeleteResult {
+  success: boolean;
+  deletedCount: number;
+  error?: string;
+}
+
+/** Risultato operazione create record */
+interface CreateResult {
+  success: boolean;
+  id?: string;
+  error?: string;
+}
+
+/** Risultato fetch valori distinti per colonne */
+interface DistinctOptionsResult {
+  success: boolean;
+  options: Record<string, string[]>;
+  error?: string;
+}
+
+/**
+ * =====================================================================
+ * 1. FETCH TABELLE PUBBLICHE
+ * =====================================================================
+ * Recupera elenco tabelle pubbliche tramite RPC Postgres
+ */
 export async function fetchPublicTables(): Promise<FetchPublicTablesResult> {
   try {
     const supabase = await createClient();
-
-    // Chiama la funzione Postgres esistente
     const { data, error } = await supabase.rpc("get_public_tables");
 
     if (error) {
@@ -28,7 +69,7 @@ export async function fetchPublicTables(): Promise<FetchPublicTablesResult> {
 
     const rows = (data ?? []) as PublicTablesRpcRow[];
 
-    // Normalizzazione: supporta più shape possibili (string o object)
+    // Normalizza vari formati di risposta RPC
     const tables = rows
       .map((row) => {
         if (typeof row === "string") return row;
@@ -48,66 +89,59 @@ export async function fetchPublicTables(): Promise<FetchPublicTablesResult> {
   }
 }
 
-interface UpdateResult {
-  success: boolean;
-  id: string;
-  error?: string;
-}
-
+/**
+ * =====================================================================
+ * 2. UPDATE RECORD
+ * =====================================================================
+ * Aggiorna un record esistente usando schema per validazione/casting
+ */
 export async function updateRecord(
   tableName: string,
   recordId: string,
   formData: FormData,
-  schema: TableColumnConfig[]  // ✅ Usa lo stesso schema di createRecord
+  schema: TableColumnConfig[]
 ): Promise<UpdateResult> {
   try {
-    // ✅ Validazione input (stile tuo codice)
+    // Validazione input base
     if (!tableName || typeof tableName !== 'string') {
       throw new Error('Nome tabella non valido');
     }
-
     if (!recordId || typeof recordId !== 'string') {
       throw new Error('ID record non valido');
     }
 
     const supabase = await createClient();
     const rawData = Object.fromEntries(formData.entries());
-
     console.log('📤 Raw FormData UPDATE:', { tableName, recordId, rawData });
 
-    // 🚀 1. VERIFICA RECORD ESISTENTE (sicurezza)
+    // 1. Verifica record esistente
     const { data: existingRecord, error: fetchError } = await supabase
       .from(tableName)
       .select('id')
-      .eq('id', recordId.trim())
-      .select('id');
+      .eq('id', recordId.trim());
 
-    if (fetchError || !existingRecord) {
+    if (fetchError || !existingRecord?.length) {
       console.error('❌ Record non trovato:', { tableName, recordId, fetchError });
       throw new Error(`Record con ID ${recordId} non trovato`);
     }
 
-    // 🚀 2. CAST usando SCHEMA (UGUALE A CREATE RECORD!)
+    // 2. Casting dati usando schema (esclude ID)
     const castedData: Record<string, any> = {};
-    
     schema.forEach(col => {
+      if (col.key === 'id') return; // ID non modificabile
+      
       const rawValue = rawData[col.key];
-      
-      // Skip ID (non modificabile)
-      if (col.key === 'id') return;
-      
       if (rawValue !== undefined) {
         castedData[col.key] = castFormValue(rawValue as string, col.format);
       }
     });
 
     console.log('🔮 Casted Update Data:', castedData);
-
     if (Object.keys(castedData).length === 0) {
       throw new Error('Nessun campo modificato');
     }
 
-    // 🚀 3. ESEGUI UPDATE
+    // 3. Esegui update
     const { data: updated, error: updateError } = await supabase
       .from(tableName)
       .update(castedData)
@@ -127,14 +161,11 @@ export async function updateRecord(
 
     console.log('✅ Update Success:', { tableName, recordId, updated });
 
-    // 🚀 4. Revalidate (UGUALE ALLE ALTRE FUNZIONI)
+    // 4. Revalidate paths
     revalidatePath(`/manage-tables`);
     revalidatePath(`/manage-tables?*`);
 
-    return {
-      success: true,
-      id: recordId
-    };
+    return { success: true, id: recordId };
 
   } catch (error) {
     console.error('💥 UpdateRecord CRASH:', error);
@@ -146,31 +177,30 @@ export async function updateRecord(
   }
 }
 
-interface DeleteResult {
-  success: boolean;
-  deletedCount: number;
-  error?: string;
-}
-
+/**
+ * =====================================================================
+ * 3. DELETE RECORD MULTIPLI
+ * =====================================================================
+ * Elimina record multipli tramite ID con count di conferma
+ */
 export async function deleteRecords(tableName: string, ids: string[]): Promise<DeleteResult> {
   try {
-    // ✅ Validazione input
+    // Validazione input
     if (!tableName || typeof tableName !== 'string') {
       throw new Error('Nome tabella non valido');
     }
-    
     if (!ids?.length || !ids.every(id => typeof id === 'string')) {
       throw new Error('ID non validi');
     }
 
     const supabase = await createClient();
-    
-    // ✅ Esegui delete con count
+
+    // Esegui delete con count
     const { data, error } = await supabase
       .from(tableName)
       .delete()
       .in('id', ids)
-      .select('id'); // Per ottenere count reali
+      .select('id');
 
     if (error) {
       console.error('❌ Supabase Delete Error:', {
@@ -185,7 +215,7 @@ export async function deleteRecords(tableName: string, ids: string[]): Promise<D
 
     console.log('✅ Delete Success:', { tableName, deleted: data?.length || 0 });
 
-    // 🚀 Revalidate
+    // Revalidate paths
     revalidatePath(`/manage-tables`);
     revalidatePath(`/manage-tables?*`);
 
@@ -204,16 +234,16 @@ export async function deleteRecords(tableName: string, ids: string[]): Promise<D
   }
 }
 
-interface CreateResult {
-  success: boolean;
-  id?: string;
-  error?: string;
-}
-
+/**
+ * =====================================================================
+ * 4. CREATE RECORD
+ * =====================================================================
+ * Crea nuovo record con validazione/casting tramite schema
+ */
 export async function createRecord(
   tableName: string, 
   formData: FormData, 
-  schema: TableColumnConfig[]  // ✅ Passa schema!
+  schema: TableColumnConfig[]
 ): Promise<CreateResult> {
   try {
     const supabase = await createClient();
@@ -221,9 +251,8 @@ export async function createRecord(
     
     console.log('📤 Raw FormData:', rawData);
 
-    // 🚀 CAST usando SCHEMA (ultra preciso!)
+    // Casting dati usando schema
     const castedData: Record<string, any> = {};
-    
     schema.forEach(col => {
       const rawValue = rawData[col.key];
       if (rawValue !== undefined) {
@@ -232,7 +261,6 @@ export async function createRecord(
     });
 
     console.log('🔮 Casted Data:', castedData);
-
     if (Object.keys(castedData).length === 0) {
       throw new Error('Nessun dato valido');
     }
@@ -248,6 +276,7 @@ export async function createRecord(
       throw new Error(error.message);
     }
 
+    // Revalidate paths
     revalidatePath(`/manage-tables`);
     revalidatePath(`/manage-tables?*`);
 
@@ -261,22 +290,21 @@ export async function createRecord(
   }
 }
 
-// 🚀 FETCH DISTINCT VALUES (NUOVA!)
-interface DistinctOptionsResult {
-  success: boolean;
-  options: Record<string, string[]>;
-  error?: string;
-}
-
+/**
+ * =====================================================================
+ * 5. FETCH VALORI DISTINTI (OTTONI)
+ * =====================================================================
+ * Recupera valori unici per colonne (con RPC + fallback)
+ */
 export async function fetchDistinctOptions(
   tableName: string,
   columns: string[]
 ): Promise<DistinctOptionsResult> {
   try {
+    // Validazione input
     if (!tableName || typeof tableName !== 'string') {
       throw new Error('Nome tabella non valido');
     }
-
     if (!columns?.length || !columns.every(col => typeof col === 'string')) {
       throw new Error('Colonne non valide');
     }
@@ -284,9 +312,9 @@ export async function fetchDistinctOptions(
     const supabase = await createClient();
     const options: Record<string, string[]> = {};
 
-    // 🚀 Query OTTIMIZZATA: usa rpc per performance estreme
+    // Esegui query parallele per ogni colonna
     const promises = columns.map(async (column) => {
-      // ✅ QUERY SUPABASE OTTIMIZZATA per grandi tabelle
+      // Prova RPC ottimizzata prima
       const { data, error } = await supabase
         .rpc('get_distinct_top_values', {
           p_table_name: tableName,
@@ -294,17 +322,18 @@ export async function fetchDistinctOptions(
           p_limit: 20
         });
 
-        console.log('📥 RPC Response RAW:', data);
+      console.log('📥 RPC Response RAW:', data);
+      
       if (error) {
         console.warn(`⚠️ Distinct RPC failed for ${column}, fallback query:`, error.message);
         
-        // ✅ FALLBACK con LIMIT e DISTINCT nativo
+        // Fallback con query nativa
         const { data: fallbackData, error: fallbackError } = await supabase
           .from(tableName)
           .select(`${column}`)
           .not(column, 'is', null)
           .not(column, 'eq', '')
-          .limit(10000) // Max per evitare timeout su tabelle enormi
+          .limit(10000)
           .order(column);
 
         if (fallbackError) {
@@ -312,7 +341,7 @@ export async function fetchDistinctOptions(
           return;
         }
 
-        // ✅ Distinct con limite 20 dal fallback
+        // Estrai distinct dal fallback
         const distinctValues = Array.from(
           new Set(fallbackData?.map((row: any) => row[column]).filter(Boolean) ?? [])
         )
@@ -323,7 +352,7 @@ export async function fetchDistinctOptions(
         return;
       }
 
-      // ✅ Filtra null/empty e limita a 20
+      // Processa RPC response
       const distinctValues = (data || [])
         .map((row: any) => row.value)
         .filter(Boolean)
@@ -333,8 +362,10 @@ export async function fetchDistinctOptions(
     });
 
     await Promise.all(promises);
-
-    console.log('✅ Distinct Options Optimized:', { tableName, count: Object.values(options).reduce((sum, vals) => sum + vals.length, 0) });
+    console.log('✅ Distinct Options Optimized:', { 
+      tableName, 
+      count: Object.values(options).reduce((sum, vals) => sum + vals.length, 0) 
+    });
 
     return {
       success: true,
@@ -351,7 +382,12 @@ export async function fetchDistinctOptions(
   }
 }
 
-// 🚀 FUNZIONE FETCH GENERICA
+/**
+ * =====================================================================
+ * 6. FETCH DATI TABELLA GENERICO (PAGINATO)
+ * =====================================================================
+ * Fetch dati con paginazione, ordinamento e conteggio totale
+ */
 export async function fetchTableDataGeneric(
   tableName: string,
   page: number = 1, 
@@ -364,14 +400,15 @@ export async function fetchTableDataGeneric(
   const traceId = `trace-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   
   console.log(`🔍 Supabase CALL START [${traceId}] table=${tableName} page=${page}`);
+  
   const { data, error, count } = await supabase
     .from(tableName)
     .select("*", { count: 'estimated' })
     .order(sortBy, { ascending: sortDir === 'asc' })
     .range(from, from + limit - 1);
 
-    console.log(`🔍 Supabase CALL END [${traceId}] count=${count} rows=${data?.length}`);
-    
+  console.log(`🔍 Supabase CALL END [${traceId}] count=${count} rows=${data?.length}`);
+  
   if (error) throw error;
 
   const totalPages = Math.ceil((count || 0) / limit);

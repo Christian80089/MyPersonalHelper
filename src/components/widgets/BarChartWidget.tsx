@@ -1,21 +1,28 @@
 "use client";
 
 import { ApexOptions } from "apexcharts";
-
 import dynamic from "next/dynamic";
-// Dynamically import the ReactApexChart component
+
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
-export function BarChartWidget() {
-  const options: ApexOptions = {
+interface BarChartProps {
+  series?: Array<{
+    name: string;
+    data: number[];
+  }>;
+  options?: ApexOptions;
+}
+
+export function BarChartWidget({ series: externalSeries, options: externalOptions }: BarChartProps) {
+  const defaultOptions: ApexOptions = {
     colors: ["#465fff"],
     chart: {
       fontFamily: "Outfit, sans-serif",
       type: "bar",
       height: "100%",
-      width: "100%", // important
+      width: "100%",
       toolbar: {
         show: false,
       },
@@ -79,7 +86,6 @@ export function BarChartWidget() {
     fill: {
       opacity: 1,
     },
-
     tooltip: {
       enabled: true,
       followCursor: true,
@@ -90,18 +96,23 @@ export function BarChartWidget() {
       },
     },
   };
-  const series = [
+
+  const defaultSeries = [
     {
       name: "Sales",
       data: [168, 385, 201, 298, 187, 195, 291, 110, 215, 390, 280, 112],
     },
   ];
+
+  const finalOptions: ApexOptions = { ...defaultOptions, ...externalOptions };
+  const finalSeries = externalSeries || defaultSeries;
+
   return (
     <div className="max-w-full overflow-x-auto no-scrollbar">
       <div id="chartOne">
         <ReactApexChart
-          options={options}
-          series={series}
+          options={finalOptions}
+          series={finalSeries}
           type="bar"
           height={180}
         />

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -9,13 +10,22 @@ import ReactGridLayout, {
   type ResponsiveLayouts,
 } from "react-grid-layout";
 
-import "react-grid-layout/css/styles.css";
-import "react-resizable/css/styles.css";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { KpiCardWidget } from "@/components/widgets/KpiCardWidget";
 import { BarChartWidget } from "@/components/widgets/BarChartWidget";
 import { LineChartWidget } from "@/components/widgets/LineChartWidget";
 import { PieChartWidget } from "@/components/widgets/PieChartWidget";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      retry: 3,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 type WidgetType = "kpiCard" | "barChart" | "lineChart" | "pieChart";
 
@@ -40,7 +50,21 @@ const WIDGET_CATALOG: WidgetDef[] = [
     defaultSize: { w: 6, h: 6 },
     render: () => <KpiCardWidget title="Revenue" value="€12.4k" subtitle="Last 30 days" />,
   },
-  { type: "barChart", label: "Bar Chart", defaultSize: { w: 12, h: 6 }, render: () => <BarChartWidget /> },
+  { 
+    type: "barChart", 
+    label: "Bar Chart", 
+    defaultSize: { w: 12, h: 6 }, 
+    render: (widget: Widget) => (
+      <BarChartWidget
+        table_name={widget.config?.table_name as string ?? 'Salary'}
+        date_column={widget.config?.date_column as string ?? 'data_busta_paga'}
+        sum_column={widget.config?.sum_column as string ?? 'netto_busta_paga'}
+        granularity={widget.config?.granularity as any ?? 'monthly'}
+        start_date="2025-01-01"
+        end_date="2025-12-31"
+      />
+    ) 
+  },
   { type: "lineChart", label: "Line Chart", defaultSize: { w: 12, h: 9 }, render: () => <LineChartWidget /> },
   { type: "pieChart", label: "Pie Chart", defaultSize: { w: 6, h: 8 }, render: () => <PieChartWidget /> },
 ];
@@ -51,7 +75,6 @@ const breakpoints: Record<BP, number> = { lg: 1200, md: 996, sm: 768, xs: 480, x
 const colsByBp: Record<BP, number> = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 };
 
 // -------- layout helpers --------
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(n, max));
 }
@@ -140,7 +163,7 @@ export default function DashboardBuilder(props: {
     return saved ?? props.initialLayouts ?? { lg: [] };
   }, [props.initialLayouts]);
 
-  // Width + robust measure (ResizeObserver + “rinforzo”)
+  // Width + robust measure (ResizeObserver + "rinforzo")
   const { width, containerRef, mounted, measureWidth } = useContainerWidth({
     measureBeforeMount: true,
     initialWidth: 1280,
@@ -210,7 +233,7 @@ export default function DashboardBuilder(props: {
     setLayouts(rebuildMobileFromLg(current));
   }, [layouts, mounted, setLayouts]);
 
-  // 4) Add/remove widget: aggiorna tutti i breakpoint “desktop” se presenti, ma senza reset manuale
+  // 4) Add/remove widget: aggiorna tutti i breakpoint "desktop" se presenti, ma senza reset manuale
   const addWidget = useCallback(
     (type: WidgetType) => {
       const meta = WIDGET_CATALOG.find((x) => x.type === type);
@@ -303,7 +326,9 @@ export default function DashboardBuilder(props: {
             )}
           </div>
 
-          <div className="h-[calc(100%-52px)] min-w-0 overflow-hidden p-4">{def ? def.render(w) : null}</div>
+          <div className="h-[calc(100%-52px)] min-w-0 overflow-hidden p-4">
+            {def ? def.render(w) : null}
+          </div>
         </div>
       );
     });
@@ -322,7 +347,6 @@ export default function DashboardBuilder(props: {
               Add {w.label}
             </button>
           ))}
-
           <button
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200/70 bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/15 dark:border-gray-800/80 dark:bg-gray-dark dark:text-gray-200 dark:hover:bg-gray-900/60"
             onClick={clearDashboard}
@@ -337,33 +361,35 @@ export default function DashboardBuilder(props: {
           Nessun widget. Usa i pulsanti “Add …” per aggiungerne uno.
         </div>
       ) : (
-        <div className="w-full min-h-[400px] rounded-2xl">
-          {mounted && (
-            <ReactGridLayout
-              width={width}
-              layout={layout}
-              gridConfig={{
-                cols,
-                rowHeight: 30,
-                margin: [16, 16],
-              }}
-              dragConfig={{
-                enabled: editable,
-                handle: ".handle",
-              }}
-              resizeConfig={{
-                enabled: editable,
-                handles: ["se"],
-              }}
-              onLayoutChange={(nextLayout) => {
-                // aggiorna solo breakpoint corrente: indipendenza garantita [page:4]
-                setLayoutForBreakpoint(breakpoint, nextLayout);
-              }}
-            >
-              {children}
-            </ReactGridLayout>
-          )}
-        </div>
+        <QueryClientProvider client={queryClient}>
+          <div className="w-full min-h-[400px] rounded-2xl">
+            {mounted && (
+              <ReactGridLayout
+                width={width}
+                layout={layout}
+                gridConfig={{
+                  cols,
+                  rowHeight: 30,
+                  margin: [16, 16],
+                }}
+                dragConfig={{
+                  enabled: editable,
+                  handle: ".handle",
+                }}
+                resizeConfig={{
+                  enabled: editable,
+                  handles: ["se"],
+                }}
+                onLayoutChange={(nextLayout) => {
+                  // aggiorna solo breakpoint corrente: indipendenza garantita [page:4]
+                  setLayoutForBreakpoint(breakpoint, nextLayout);
+                }}
+              >
+                {children}
+              </ReactGridLayout>
+            )}
+          </div>
+        </QueryClientProvider>
       )}
     </div>
   );
